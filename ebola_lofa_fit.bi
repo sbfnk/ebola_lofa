@@ -1,6 +1,7 @@
 model ebola_lofa_fit {
 
   const first_obs = 0
+  const rate_multiplier = 1
 
   const e_rho = 2
   const e_gamma = 3
@@ -112,10 +113,10 @@ model ebola_lofa_fit {
 
   sub parameter {
     p_N <- 270114
-    p_rho <- 1 / (e_rho * 4.7) * 7
-    p_alpha <- 1 * 7
+    p_rho <- 1 / (e_rho * 4.7) * rate_multiplier
+    p_alpha <- 1 * rate_multiplier
     p_cfr <- 0.6695464
-    p_gamma <- 1 / (e_gamma * 2.601496) * 7
+    p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
     p_initI ~ uniform(0, 100)
     p_initE ~ uniform(0, 100)
     p_initR0 ~ uniform(0, 10)
