@@ -2,7 +2,8 @@ model ebola_lofa_fit {
 
   const first_obs = 0
   const rate_multiplier = 1
-
+  const epsilon = 2; // observation error tolerance
+ 
   const e_rho = 2
   const e_gamma = 3
   const e_kappa = 2
@@ -129,9 +130,27 @@ model ebola_lofa_fit {
     next_obs <- 0
   }
 
+  sub bridge {
+    const lambda = 2.0;
+
+    input Admissions_ell2, Admissions_sf2
+    input Deaths_ell2, Deaths_sf2
+
+    inline Admission_k = Admissions_sf2*exp(-0.5*(t_next_obs - t_now)**2/(Admissions_ell2)**2);
+    inline Admission_mu = Z_h*Admissions_k/Admissions_sf2;
+    inline Admissions_sigma = sqrt(Admissions_sf2 - Admissions_k*Admissions_k/Admissions_sf2 + epsilon**2);
+
+    Admissions ~ log(Admissions_mu, lambda*Admissions_sigma);
+
+    inline Admission_k = Deaths_sf2*exp(-0.5*(t_next_obs - t_now)**2/(Deaths_ell2)**2);
+    inline Admission_mu = Z_h*Deaths_k/Deaths_sf2;
+    inline Deaths_sigma = sqrt(Deaths_sf2 - Deaths_k*Deaths_k/Deaths_sf2 + epsilon**2);
+
+    Deaths ~ log(Deaths_mu, lambda*Deaths_sigma);
+  }
+
   sub observation {
-//    Admissions ~ truncated_normal(p_rep * Zh, sqrt(p_rep * (1 - p_rep) * Zh))
-    Admissions ~ truncated_normal(Zh, p_epsilon, lower = 0)
-    Deaths ~ truncated_normal(p_rep_d * Zd, sqrt(p_rep_d * (1 - p_rep_d) * Zd))
+    Admissions ~ gaussian(Zh, epsilon)
+    Deaths ~ gaussian(Zd, epsilon)
   }
 }
