@@ -233,7 +233,7 @@ if (length(num_particles) > 0) {
   libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
   run_prior$global_options[["seed"]] <- libbi_seed
   run_particle_adapted <-
-    adapt_particles(run_prior, min = 2 * nrow(admissions_data))
+    adapt_particles(run_prior, min = 2 * nrow(admissions_data), max = 2**15)
 }
 
 if ("nparticles" %in% names(run_particle_adapted$global_options))
