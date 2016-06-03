@@ -2,13 +2,13 @@ model ebola_lofa_fit {
 
   const first_obs = 0
   const rate_multiplier = 1
-  const epsilon = 2; // observation error tolerance
  
   const e_rho = 2
   const e_gamma = 3
   const e_kappa = 2
 
   input admission_delay
+  input epsilon
 
   dim rho_erlang(e_rho)
   dim gamma_erlang(e_gamma)
@@ -29,8 +29,6 @@ model ebola_lofa_fit {
 
   param p_vol_R0
 
-  param p_epsilon
-
   state S (has_output = 0)
   state E[rho_erlang] (has_output = 0)
   state Ic[gamma_erlang] (has_output = 0)
@@ -41,7 +39,6 @@ model ebola_lofa_fit {
   state Zd (has_output = 0)
   state R0
   state next_obs (has_output = 0)
-  state hospitalised[gamma_erlang] (has_output = 0)
 
   obs Admissions
   obs Deaths
@@ -60,7 +57,7 @@ model ebola_lofa_fit {
     Zd <- (t_now <= first_obs ? 0 : (t_next_obs > next_obs ? 0 : Zd))
     next_obs <- (t_next_obs > next_obs ? t_next_obs : next_obs)
 
-    inline kappa = 1 / admission_delay
+    inline kappa = 1 / admission_delay * rate_multiplier
     inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - p_h) * p_gamma)
     ode {
 
@@ -114,7 +111,6 @@ model ebola_lofa_fit {
     p_vol_R0 ~ gamma(shape = 1.7, scale = 1 / 1.9)
     p_h ~ uniform(0, 1)
     p_rep_d ~ uniform(0, 1)
-    p_epsilon ~ gamma(shape = 1, scale = 5)
   }
 
   sub initial {
@@ -136,21 +132,20 @@ model ebola_lofa_fit {
     input Admissions_ell2, Admissions_sf2
     input Deaths_ell2, Deaths_sf2
 
-    inline Admission_k = Admissions_sf2*exp(-0.5*(t_next_obs - t_now)**2/(Admissions_ell2)**2);
-    inline Admission_mu = Z_h*Admissions_k/Admissions_sf2;
+    inline Admissions_k = Admissions_sf2*exp(-0.5*(t_next_obs - t_now)**2/Admissions_ell2);
+    inline Admissions_mu = Zh*Admissions_k/Admissions_sf2;
     inline Admissions_sigma = sqrt(Admissions_sf2 - Admissions_k*Admissions_k/Admissions_sf2 + epsilon**2);
+    Admissions ~ gaussian(Admissions_mu, lambda*Admissions_sigma);
 
-    Admissions ~ log(Admissions_mu, lambda*Admissions_sigma);
-
-    inline Admission_k = Deaths_sf2*exp(-0.5*(t_next_obs - t_now)**2/(Deaths_ell2)**2);
-    inline Admission_mu = Z_h*Deaths_k/Deaths_sf2;
+    inline Deaths_k = Deaths_sf2*exp(-0.5*(t_next_obs - t_now)**2/Deaths_ell2);
+    inline Deaths_mu = p_rep_d*Zd*Deaths_k/Deaths_sf2;
     inline Deaths_sigma = sqrt(Deaths_sf2 - Deaths_k*Deaths_k/Deaths_sf2 + epsilon**2);
 
-    Deaths ~ log(Deaths_mu, lambda*Deaths_sigma);
+    Deaths ~ gaussian(Deaths_mu, lambda*Deaths_sigma);
   }
 
   sub observation {
     Admissions ~ gaussian(Zh, epsilon)
-    Deaths ~ gaussian(Zd, epsilon)
+    Deaths ~ gaussian(p_rep_d * Zd, p_rep_d * (1 - p_rep_d) * Zd)
   }
 }

@@ -70,7 +70,7 @@ if (length(seed) == 0) {
 
 set.seed(seed)
 
-rate_multiplier <- ifelse(daily, 1, 1 / 7)
+rate_multiplier <- ifelse(daily, 1, 7)
 
 ## read incidence data
 inc_filename <- paste0("incidence_", ifelse(daily, "daily", "weekly"), ".rds")
@@ -80,7 +80,7 @@ adm_filename <- paste0("admission_delays_",
                        ifelse(daily, "daily", "weekly"), ".rds")
 admission_delays <- readRDS(paste(code_dir, "data", adm_filename, sep = "/"))
 admission_delays <- admission_delays %>% 
-  mutate(admission.delay = admission.delay * rate_multiplier)
+  mutate(admission.delay = admission.delay)
 
 admission_dates <-
   data.frame(date = seq.Date(min_date, max_date,
@@ -93,7 +93,7 @@ admissions_data <- admission_dates %>%
   left_join(incidence[["admissions"]], by = "date") %>%
   left_join(incidence[["deaths"]], by = "date") %>%
   filter(between(date, min_date, max_date)) %>%
-  mutate(nr = as.numeric(((date - min(date)) * rate_multiplier + 1))) %>% 
+  mutate(nr = as.integer(((date - min(date)) / rate_multiplier + 1))) %>% 
   mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>% 
   mutate(deaths = ifelse(is.na(deaths), 0, deaths))
 
@@ -109,9 +109,14 @@ delay_dates$value <-
          y = admission_delays$admission.delay,
          xout = delay_dates$date)$y
 delay_dates <- delay_dates %>% 
-  mutate(nr = as.numeric(((date - min(date)) * rate_multiplier)))
+  mutate(nr = as.integer(((date - min(date)) / rate_multiplier)))
 
-input <- list(admission_delay = delay_dates %>% select(nr, value))
+input <- list(admission_delay = delay_dates %>% select(nr, value),
+              Admissions_ell2 = 3.09940060764, 
+              Admissions_sf2 = 484.158180739, 
+              Deaths_ell2 = 3.03533258405, 
+              Deaths_sf2 = 10.3888336344,
+              epsilon = sqrt(52.5537981891))
 
 master_working_dir<- paste(output_dir, "libbi", sep = "/")
 suppressWarnings(dir.create(master_working_dir))
@@ -128,7 +133,9 @@ global_options <-
     list("end-time" = max(admissions_data$nr),
          "start-time" = 0,
          noutputs = max(admissions_data$nr), 
-         nsamples = pre_samples)
+         nbridges = max(admissions_data$nr), 
+         nsamples = pre_samples,
+         filter = "bridge")
 
 if (length(num_threads) > 0)
 {
@@ -146,6 +153,8 @@ if (verbose) ## all states
                        ebola_model$get_lines()[no_output])
   ebola_model$update_lines(no_output, updated_lines)
 }
+
+ebola_model <- ebola_model$fix(rate_multiplier = rate_multiplier)
 
 ## find line where we want to insert the R0 trajectory
 transition_line <- grep("[[:space:]]*sub transition", ebola_model$get_lines())
@@ -177,7 +186,7 @@ if (sample_prior)
     ## sample prior
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior", 
                    global_options = global_options, client = "sample", 
-                   working_folder = working_dir, 
+                   working_folder = working_dir, time_dim = "nr", 
                    obs = obs, input = input, verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
@@ -209,12 +218,12 @@ if (sample_prior)
 ## ebola_model$add_block("proposal_initial",
 ##                       run_det_adapted$model$get_block("proposal_initial"))
 
-min_particles <- 2 * nrow(admissions_data)
+min_particles <- 2**floor(log2(2 * nrow(admissions_data)))
 
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
-                   input = input, obs = obs,
+                   input = input, obs = obs, time_dim = "nr", 
                    verbose = verbose, nparticles = min_particles)
 
 if (length(num_particles) > 0) {

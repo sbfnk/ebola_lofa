@@ -2,6 +2,7 @@ import numpy as np
 import GPy
 import csv
 import matplotlib
+import os
 
 code_dir = os.path.expanduser("~/code/ebola_lofa/")
 data_dir = os.path.expanduser("~/Data/Ebola/Lofa/")
@@ -13,7 +14,7 @@ kernel = GPy.kern.RBF(input_dim = 1, variance = 1., lengthscale = 1.)
 m_adm = GPy.models.GPRegression(np.transpose(np.atleast_2d(admissions[:,0])),
                                 np.transpose(np.atleast_2d(admissions[:,1])),
                                 kernel)
-m_adm.Gaussian_noise.variance.constrain_bounded(0,2)
+##m_adm.Gaussian_noise.variance.constrain_bounded(0,2)
 
 m_adm.optimize()
 print(m_adm)
@@ -25,7 +26,7 @@ m_dea = GPy.models.GPRegression(np.transpose(np.atleast_2d(deaths[:,0])),
                             np.transpose(np.atleast_2d(deaths[:,1])),
                             kernel)
 
-m_dea.Gaussian_noise.variance.constrain_bounded(0,2)
+##m_dea.Gaussian_noise.variance.constrain_bounded(0,2)
 
 m_dea.optimize()
 print(m_dea)
