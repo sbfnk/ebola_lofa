@@ -124,6 +124,12 @@ working_dir <- paste(master_working_dir, r0_trajectory, sep = "/")
 unlink(working_dir, recursive = TRUE)
 dir.create(working_dir)
 
+if (length(output_file_name) == 0)
+{
+    filebase <- "ebola_lofa"
+    output_file_name <- paste(filebase, r0_trajectory, sep = "_")
+}
+
 if (length(grep("/", output_file_name)) == 0)
 {
     output_file_name <- paste(output_dir, output_file_name, sep = "/")
@@ -283,7 +289,7 @@ plot_args <- list(read = res, model = final_model,
                   density_args = list(adjust = 2), burn = burn,
                   date.origin = as.Date("2014-06-02"),
                   hline = c(R0 = 1), steps = TRUE, date.unit = "week",
-                  trend = "mean")
+                  trend = "mean", plot = FALSE)
 if (sample_prior)
 {
     plot_args[["prior"]] <- res_prior
