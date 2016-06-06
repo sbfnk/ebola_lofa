@@ -41,7 +41,6 @@ model ebola_lofa_fit {
   state next_obs (has_output = 0)
 
   obs Admissions
-  obs Deaths
 
   noise n_R0_walk
 
@@ -130,22 +129,14 @@ model ebola_lofa_fit {
     const lambda = 2.0;
 
     input Admissions_ell2, Admissions_sf2
-    input Deaths_ell2, Deaths_sf2
 
     inline Admissions_k = Admissions_sf2*exp(-0.5*(t_next_obs - t_now)**2/Admissions_ell2);
     inline Admissions_mu = Zh*Admissions_k/Admissions_sf2;
     inline Admissions_sigma = sqrt(Admissions_sf2 - Admissions_k*Admissions_k/Admissions_sf2 + epsilon**2);
     Admissions ~ gaussian(Admissions_mu, lambda*Admissions_sigma);
-
-    inline Deaths_k = Deaths_sf2*exp(-0.5*(t_next_obs - t_now)**2/Deaths_ell2);
-    inline Deaths_mu = p_rep_d*Zd*Deaths_k/Deaths_sf2;
-    inline Deaths_sigma = sqrt(Deaths_sf2 - Deaths_k*Deaths_k/Deaths_sf2 + epsilon**2);
-
-    Deaths ~ gaussian(Deaths_mu, lambda*Deaths_sigma);
   }
 
   sub observation {
-    Admissions ~ truncatec_gaussian(Zh, epsilon, lower = 0)
-    Deaths ~ truncated_gaussian(p_rep_d * Zd, p_rep_d * (1 - p_rep_d) * Zd, lower = 0)
+    Admissions ~ truncated_gaussian(Zh, epsilon, lower = 0)
   }
 }
