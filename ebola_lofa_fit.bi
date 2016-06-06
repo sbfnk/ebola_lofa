@@ -145,7 +145,7 @@ model ebola_lofa_fit {
   }
 
   sub observation {
-    Admissions ~ gaussian(Zh, epsilon)
-    Deaths ~ gaussian(p_rep_d * Zd, p_rep_d * (1 - p_rep_d) * Zd)
+    Admissions ~ truncatec_gaussian(Zh, epsilon, lower = 0)
+    Deaths ~ truncated_gaussian(p_rep_d * Zd, p_rep_d * (1 - p_rep_d) * Zd, lower = 0)
   }
 }
