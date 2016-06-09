@@ -343,6 +343,13 @@ if (sample_obs)
       sample_observations(run,
                           read_options = list(thin = thin, verbose = verbose),
                           add_options = list(seed = libbi_seed))
+    res_obs <- lapply(res, function(x)
+    {
+      if ("nr" %in% names(x))
+      {
+        x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
+      }
+    })
 
     for (obs in names(res_obs))
     {
@@ -351,7 +358,8 @@ if (sample_obs)
 
     data <- admissions_data %>%
       select(-nr) %>% 
-      gather(state, value, admissions:deaths) %>%
+##      gather(state, value, admissions:deaths) %>%
+      gather(state, value, admissions) %>%
       mutate(state = stri_trans_totitle(state)) %>%
       rename(time = date)
 
