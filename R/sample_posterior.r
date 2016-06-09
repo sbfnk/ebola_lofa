@@ -19,7 +19,7 @@ Options:
 -o --output-file=<output.file>               output file name
 -y --toy                                     use toy data
 -i --thin=<thin>                             thin
--r --sample-prior                            sample prior
+-q --sample-prior                            sample prior
 -l --sample-observations                     sample observations
 -d --daily                                   daily time steps
 -k --keep                                    keep working directory
@@ -111,12 +111,7 @@ delay_dates$value <-
 delay_dates <- delay_dates %>% 
   mutate(nr = as.integer(((date - min(date)) / rate_multiplier)))
 
-input <- list(admission_delay = delay_dates %>% select(nr, value),
-              Admissions_ell2 = 3.09940060764, 
-              Admissions_sf2 = 484.158180739, 
-              Deaths_ell2 = 3.03533258405, 
-              Deaths_sf2 = 10.3888336344,
-              epsilon = sqrt(52.5537981891))
+input <- list(admission_delay = delay_dates %>% select(nr, value))
 
 master_working_dir<- paste(output_dir, "libbi", sep = "/")
 suppressWarnings(dir.create(master_working_dir))
@@ -139,9 +134,7 @@ global_options <-
     list("end-time" = max(admissions_data$nr),
          "start-time" = 0,
          noutputs = max(admissions_data$nr), 
-         nbridges = max(admissions_data$nr), 
-         nsamples = pre_samples,
-         filter = "bridge")
+         nsamples = pre_samples)
 
 if (length(num_threads) > 0)
 {
