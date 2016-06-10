@@ -22,12 +22,15 @@ model ebola_lofa_fit {
   param p_I
   param p_E
   param p_R0
-  param p_H
+
+  param p_early_H
+  param p_late_H
+  param p_H_alpha
+  param p_H_tau
 
   param p_rep_d
 
   param p_vol_R0
-  param p_vol_H
 
   param p_epsilon
 
@@ -58,7 +61,7 @@ model ebola_lofa_fit {
     // bounded: R0 <- max(0, R0 + p_vol_R0 * n_R0_walk)
     // independent: R0 <- max(0, p_vol_R0 * n_R0_walk)
 
-    H <- max(0, H + p_vol_H * n_H_walk)
+    H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * (p_H_tau - t_now)))
 
     Zc <- (t_now <= first_obs ? 0 : (t_next_obs > next_obs ? 0 : Zc))
     Zh <- (t_now <= first_obs ? 0 : (t_next_obs > next_obs ? 0 : Zh))
@@ -116,9 +119,11 @@ model ebola_lofa_fit {
     p_I ~ uniform(0, 100)
     p_E ~ uniform(0, 100)
     p_R0 ~ uniform(0, 10)
-    p_H ~ uniform(0, 1)
     p_vol_R0 ~ uniform(0, 1)
-    p_vol_H ~ uniform(0, 1)
+    p_early_H ~ uniform(0, 1)
+    p_late_H ~ uniform(0, 1)
+    p_H_tau ~ uniform(0, 21)
+    p_H_alpha ~ uniform(0, 5)
     p_rep_d ~ uniform(0, 1)
     p_epsilon ~ uniform(1, 5)
   }
@@ -133,7 +138,7 @@ model ebola_lofa_fit {
     Zd <- 0
     Zh <- 0
     R0 <- p_R0
-    H <- p_H
+    H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * p_H_tau)))
     next_obs <- 0
   }
 
