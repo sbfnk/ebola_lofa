@@ -225,6 +225,9 @@ run_prior <- libbi(client = "sample", model = ebola_model,
                    input = input, obs = obs, time_dim = "nr", 
                    verbose = verbose, nparticles = min_particles)
 
+cat(date(), "Running the stochastic model.\n")
+run_prior <- adapt_mcmc(run_prior, min = 0, max = 1)
+
 if (length(num_particles) > 0) {
     run_particle_adapted <- run_prior
 } else
