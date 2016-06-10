@@ -153,7 +153,7 @@ if (verbose) ## all states
   ebola_model$update_lines(no_output, updated_lines)
 }
 
-ebola_model <- ebola_model$fix(rate_multiplier = rate_multiplier)
+ebola_model$fix(rate_multiplier = rate_multiplier)
 
 ## find line where we want to insert the R0 trajectory
 transition_line <- grep("[[:space:]]*sub transition", ebola_model$get_lines())
