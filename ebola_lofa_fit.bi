@@ -61,7 +61,7 @@ model ebola_lofa_fit {
     // bounded: R0 <- max(0, R0 + p_vol_R0 * n_R0_walk)
     // independent: R0 <- max(0, p_vol_R0 * n_R0_walk)
 
-    H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * (p_H_tau - t_now)))
+    H <- p_early_H + (p_late_H * (1 - p_early_H)) / (1 + exp(p_H_alpha * (p_H_tau - t_now)))
 
     Zc <- (t_now <= first_obs ? 0 : (t_next_obs > next_obs ? 0 : Zc))
     Zh <- (t_now <= first_obs ? 0 : (t_next_obs > next_obs ? 0 : Zh))
