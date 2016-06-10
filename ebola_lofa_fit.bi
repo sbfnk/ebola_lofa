@@ -130,15 +130,15 @@ model ebola_lofa_fit {
 
   sub initial {
     E[rho_erlang] <- p_E / e_rho
-    Ic[gamma_erlang] <- p_I * (1 - p_H) / e_gamma
-    Ih[gamma_erlang,kappa_erlang] <- p_I * p_H / (e_kappa * e_gamma)
+    H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * p_H_tau))
+    Ic[gamma_erlang] <- p_I * (1 - H) / e_gamma
+    Ih[gamma_erlang,kappa_erlang] <- p_I * H / (e_kappa * e_gamma)
     S <- p_N - E[0] - E[1] - Ic[0] - Ic[1] - Ic[2] - Ih[0,0] - Ih[0,1] - Ih[1,0] - Ih[1,1] - Ih[2,0] - Ih[2,1]
     Bc <- 0
     Zc <- 0
     Zd <- 0
     Zh <- 0
     R0 <- p_R0
-    H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * p_H_tau)))
     next_obs <- 0
   }
 
