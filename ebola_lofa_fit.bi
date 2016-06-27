@@ -49,12 +49,12 @@ model ebola_lofa_fit {
   obs Admissions
 
   noise n_R0_walk
-  noise n_H_walk
+  noise n_admission
 
   sub transition {
 
     n_R0_walk ~ wiener()
-    n_H_walk ~ wiener()
+    n_admission ~ gamma(shape = 100, scale = 0.01)
 
     // R0 trajectory: filled by R script
     // exponential: R0 <- R0 * exp(p_vol_R0 * n_R0_walk)
@@ -90,7 +90,7 @@ model ebola_lofa_fit {
       + (gamma_erlang > 0 ? e_gamma * p_gamma * Ih[gamma_erlang - 1,kappa_erlang] : 0) // proceeding through gamma stages
       - e_gamma * p_gamma * Ih[gamma_erlang,kappa_erlang] // proceeding through gamma stages
       + (kappa_erlang > 0 ? e_kappa * kappa * Ih[gamma_erlang, kappa_erlang - 1] : 0) // proceeding through kappa stages
-      - e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] // proceeding through kappa stages
+      - (kappa_erlang < e_kappa - 1 : e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] ? e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] * n_admissions) // proceeding through kappa stages 
 
       dBc/dt  =
       + p_cfr * e_gamma * p_gamma * Ic[e_gamma - 1]
@@ -100,9 +100,9 @@ model ebola_lofa_fit {
       + e_rho * p_rho * E[e_rho - 1]
 
       dZh/dt =
-      + e_kappa * kappa * Ih[0,e_kappa - 1]
-      + e_kappa * kappa * Ih[1,e_kappa - 1]
-      + e_kappa * kappa * Ih[2,e_kappa - 1]
+      + e_kappa * kappa * Ih[0,e_kappa - 1] * n_admission
+      + e_kappa * kappa * Ih[1,e_kappa - 1] * n_admission
+      + e_kappa * kappa * Ih[2,e_kappa - 1] * n_admission
 
       dZd/dt =
       + e_gamma * p_gamma * (Ih[e_gamma - 1,0] + Ih[e_gamma - 1,1])
