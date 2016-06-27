@@ -2,9 +2,6 @@
 ## Script for running libbi analysis                                      ##
 ############################################################################
 
-code_dir <- path.expand("~/code/ebola_lofa/")
-output_dir <- path.expand("~/Data/Ebola/Lofa")
-
 library('docopt')
 
 "Script for fitting the model to Ebola data from Lofa county.
@@ -22,6 +19,7 @@ Options:
 -q --sample-prior                            sample prior
 -l --sample-observations                     sample observations
 -d --daily                                   daily time steps
+-a --deaths                                  fit to deaths
 -k --keep                                    keep working directory
 -f --force                                   force overwrite
 -v --verbose                                 be verbose
@@ -34,6 +32,9 @@ if (opts[["help"]])
     print(opts)
     exit()
 }
+
+code_dir <- path.expand("~/code/ebola_lofa/")
+output_dir <- path.expand("~/Data/Ebola/Lofa")
 
 ## mandatory arguments
 num_samples <- as.integer(opts[["nsamples"]])
@@ -49,6 +50,7 @@ model_file <- opts[["model-file"]]
 sample_obs <- opts[["sample-observations"]]
 sample_prior <- opts[["sample-prior"]]
 keep <- opts[["keep"]]
+deaths <- opts[["deaths"]]
 verbose <- opts[["verbose"]]
 daily <- opts[["daily"]]
 
@@ -97,8 +99,9 @@ admissions_data <- admission_dates %>%
   mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>% 
   mutate(deaths = ifelse(is.na(deaths), 0, deaths))
 
-obs <- list(Admissions = admissions_data %>% select(nr, value = admissions),
-            Deaths = admissions_data %>% select(nr, value = deaths))
+obs <- list(Admissions = admissions_data %>% select(nr, value = admissions))
+
+if (deaths) obs[["Deaths"]] <- admissions_data %>% select(nr, value = deaths)
 
 delay_dates <-
   data_frame(date = seq.Date(min(admissions_data$date) - 7,
@@ -185,7 +188,7 @@ if (sample_prior)
     ## sample prior
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior", 
                    global_options = global_options, client = "sample", 
-                   working_folder = working_dir, time_dim = "nr", 
+                   working_folder = working_dir,
                    obs = obs, input = input, verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
@@ -230,7 +233,7 @@ if (length(num_particles) > 0)
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
-                   input = input, obs = obs, time_dim = "nr", 
+                   input = input, obs = obs,
                    verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
