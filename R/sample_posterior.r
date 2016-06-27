@@ -219,17 +219,25 @@ if (sample_prior)
 
 min_particles <- 2**floor(log2(2 * nrow(admissions_data)))
 
+if (length(num_particles) > 0)
+{
+  global_options[["nparticles"]] <- num_particles
+} else
+{
+  global_options[["nparticles"]] <- min_particles
+}
+
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
                    input = input, obs = obs, time_dim = "nr", 
-                   verbose = verbose, nparticles = min_particles)
+                   verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
 run_prior <- adapt_mcmc(run_prior, min = 0, max = 1)
 
 if (length(num_particles) > 0) {
-    run_particle_adapted <- run_prior
+  run_particle_adapted <- run_prior
 } else
 {
   libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
@@ -255,7 +263,7 @@ run <- run_adapted$clone()
 run$run(add_options = list("init-np" = pre_samples - 1,
                            nsamples = num_samples,
                            seed = libbi_seed),
-        init = run_adapted) 
+        init = run_adapted)
 
 if (length(model_file) == 0)
 {
