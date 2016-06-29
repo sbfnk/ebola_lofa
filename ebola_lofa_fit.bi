@@ -31,16 +31,14 @@ model ebola_lofa_fit {
 
   param p_vol_R0
 
-  param p_phi
-
   state S (has_output = 0)
   state E[rho_erlang] (has_output = 0)
   state Ic[gamma_erlang] (has_output = 0)
   state Ih[gamma_erlang,kappa_erlang] (has_output = 0)
   state Bc (has_output = 0)
   state Zc (has_output = 0)
-  state Zh (has_output = 0)
-  state Zd (has_output = 0)
+  state Zh
+  state Zd
   state R0
   state H
   state next_obs (has_output = 0)
@@ -124,7 +122,6 @@ model ebola_lofa_fit {
     p_H_tau ~ uniform(0, 21)
     p_H_alpha ~ uniform(0, 5)
     p_rep_d ~ uniform(0, 1)
-    p_phi ~ uniform(0, 5)
   }
 
   sub initial {
@@ -142,7 +139,7 @@ model ebola_lofa_fit {
   }
 
   sub observation {
-    Admissions ~ truncated_gaussian(Zh, sqrt(Zh) + 1, lower = 0)
-    Deaths ~ truncated_gaussian(p_rep_d * Zd, sqrt(p_rep_d * (1 - p_rep_d) * Zd), lower = 0)
+    Admissions ~ truncated_gaussian(Zh, max(sqrt(Zh), 1), lower = 0)
+    Deaths ~ truncated_gaussian(p_rep_d * Zd, max(sqrt(p_rep_d * (1 - p_rep_d) * Zd), 1), lower = 0)
   }
 }

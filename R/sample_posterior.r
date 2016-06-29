@@ -60,6 +60,7 @@ library('RBi')
 library('RBi.helpers')
 library('cowplot')
 library('stringi')
+library('truncnorm')
 
 ## set beginning and end of analysis
 min_date <- as.Date("2014-06-01")
@@ -156,6 +157,11 @@ if (verbose) ## all states
 
 ebola_model$fix(rate_multiplier = rate_multiplier)
 
+if (!deaths)
+{
+    model$fix(p_rep_d = 01)
+}
+
 ## find line where we want to insert the R0 trajectory
 transition_line <- grep("[[:space:]]*sub transition", ebola_model$get_lines())
 
@@ -243,6 +249,7 @@ if (length(num_particles) > 0) {
 {
   libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
   run_prior$global_options[["seed"]] <- libbi_seed
+  cat(date(), "Adapting the number of particles.\n")
   run_particle_adapted <-
     adapt_particles(run_prior, min = 2 * nrow(admissions_data), max = 2**15)
 }
@@ -283,7 +290,7 @@ saveRDS(list(nparticles = nparticles),
 res <- bi_read(read = run, thin = thin,
                vars = c(final_model$get_vars("param"),
                         final_model$get_vars("noise"),
-                        "R0", 
+                        "R0",
                         "loglikelihood", "logprior"),
                verbose = verbose)
 
@@ -323,6 +330,10 @@ if (!is.null(p_param[["likelihoods"]]))
 {
     ggsave(paste(output_file_name, "likelihoods.pdf", sep = "_"), p_param$likelihoods)
 }
+if (!is.null(p_param[["states"]]))
+{
+    ggsave(paste(output_file_name, "r0.pdf", sep = "_"), p_param$states)
+}
 
 cat(date(), "..parameters.\n")
 l <- lapply(names(res), function(x) {
@@ -344,21 +355,37 @@ if (sample_obs)
     cat(date(), "Sampling from the joint distribution.\n")
     libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
 
-    res_obs <-
-      sample_observations(run,
-                          read_options = list(thin = thin, verbose = verbose),
-                          add_options = list(seed = libbi_seed))
-    res_obs <- lapply(res, function(x)
-    {
-      if ("nr" %in% names(x))
-      {
-        x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
-      }
-    })
+      ## sample_observations(run,
+      ##                     read_options = list(thin = thin, verbose = verbose),
+      ##                     add_options = list(seed = libbi_seed))
+    ## res_obs <- lapply(res, function(x)
+    ## {
+    ##   if ("nr" %in% names(x))
+    ##   {
+    ##     x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
+    ##   }
+    ## })
 
-    for (obs in names(res_obs))
+    ## for (obs in names(res_obs))
+    ## {
+    ##   res[[obs]] <- res_obs[[obs]]
+    ## }
+
+    res$Admissions <- res$Zh %>%
+      rename(Zh = value) %>%
+      mutate(mean = Zh, sd = sqrt(Zh)) %>%
+      mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) 
+
+    if (deaths)
     {
-      res[[obs]] <- res_obs[[obs]]
+      res$Deaths <- res$Zd %>%
+        rename(Zd = value) %>%
+        left_join(res$p_rep_d %>% rename(rep_d = value), by = "np") %>%
+        mutate(mean = Zd, sd = sqrt(rep_d * (1 - rep_d) * Zd)) %>%
+        mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+          mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+        mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd))
     }
 
     data <- admissions_data %>%
@@ -370,8 +397,7 @@ if (sample_obs)
 
     plot_args[["read"]] <- res
     plot_args[["data"]] <- data
-    plot_args[["steps"]] <- FALSE
-    plot_args[["states"]] <- names(res_obs)
+    plot_args[["steps"]] <- TRUE
     plot_args[["params"]] <- c()
     plot_args[["noises"]] <- c()
     plot_args[["hline"]] <- NULL
