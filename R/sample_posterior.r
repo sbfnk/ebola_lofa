@@ -159,7 +159,7 @@ ebola_model$fix(rate_multiplier = rate_multiplier)
 
 if (!deaths)
 {
-    model$fix(p_rep_d = 01)
+    ebola_model$fix(p_rep_d = 01)
 }
 
 ## find line where we want to insert the R0 trajectory
