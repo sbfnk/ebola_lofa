@@ -19,8 +19,7 @@ model ebola_lofa_fit {
   param p_cfr // case-fatality rate
   param p_alpha // rate of burial
 
-  param p_I
-  param p_E
+  param p_Inf
   param p_R0
 
   param p_early_H
@@ -32,7 +31,7 @@ model ebola_lofa_fit {
 
   param p_vol_R0
 
-  param p_epsilon
+  param p_phi
 
   state S (has_output = 0)
   state E[rho_erlang] (has_output = 0)
@@ -47,6 +46,7 @@ model ebola_lofa_fit {
   state next_obs (has_output = 0)
 
   obs Admissions
+  obs Deaths
 
   noise n_R0_walk
   noise n_admission
@@ -90,7 +90,7 @@ model ebola_lofa_fit {
       + (gamma_erlang > 0 ? e_gamma * p_gamma * Ih[gamma_erlang - 1,kappa_erlang] : 0) // proceeding through gamma stages
       - e_gamma * p_gamma * Ih[gamma_erlang,kappa_erlang] // proceeding through gamma stages
       + (kappa_erlang > 0 ? e_kappa * kappa * Ih[gamma_erlang, kappa_erlang - 1] : 0) // proceeding through kappa stages
-      - (kappa_erlang < e_kappa - 1 : e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] ? e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] * n_admissions) // proceeding through kappa stages 
+      - (kappa_erlang < (e_kappa - 1) ? e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] : e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] * n_admission) // proceeding through kappa stages 
 
       dBc/dt  =
       + p_cfr * e_gamma * p_gamma * Ic[e_gamma - 1]
@@ -116,8 +116,7 @@ model ebola_lofa_fit {
     p_alpha <- 1 * rate_multiplier
     p_cfr <- 0.6695464
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
-    p_I ~ uniform(0, 100)
-    p_E ~ uniform(0, 100)
+    p_Inf ~ uniform(0, 100)
     p_R0 ~ uniform(0, 10)
     p_vol_R0 ~ uniform(0, 1)
     p_early_H ~ uniform(0, 1)
@@ -125,14 +124,14 @@ model ebola_lofa_fit {
     p_H_tau ~ uniform(0, 21)
     p_H_alpha ~ uniform(0, 5)
     p_rep_d ~ uniform(0, 1)
-    p_epsilon ~ uniform(1, 5)
+    p_phi ~ uniform(0, 5)
   }
 
   sub initial {
-    E[rho_erlang] <- p_E / e_rho
+    E[rho_erlang] <- p_Inf * p_gamma / (e_rho * (p_gamma + p_rho))
     H <- p_early_H + (p_late_H - p_early_H) / (1 + exp(p_H_alpha * p_H_tau))
-    Ic[gamma_erlang] <- p_I * (1 - H) / e_gamma
-    Ih[gamma_erlang,kappa_erlang] <- p_I * H / (e_kappa * e_gamma)
+    Ic[gamma_erlang] <- p_Inf * (1 - H) * p_rho / (e_gamma * (p_gamma + p_rho))
+    Ih[gamma_erlang,kappa_erlang] <- p_Inf * H * p_rho / ((e_kappa * e_gamma) * (p_gamma + p_rho))
     S <- p_N - E[0] - E[1] - Ic[0] - Ic[1] - Ic[2] - Ih[0,0] - Ih[0,1] - Ih[1,0] - Ih[1,1] - Ih[2,0] - Ih[2,1]
     Bc <- 0
     Zc <- 0
@@ -143,7 +142,7 @@ model ebola_lofa_fit {
   }
 
   sub observation {
-    Admissions ~ truncated_gaussian(Zh, p_epsilon, lower = 0)
-//    Deaths ~ truncated_gaussian(p_rep_d * Zd, sqrt(p_rep_d * (1 - p_rep_d) * Zd), lower = 0)
+    Admissions ~ truncated_gaussian(Zh, sqrt(Zh) + 1, lower = 0)
+    Deaths ~ truncated_gaussian(p_rep_d * Zd, sqrt(p_rep_d * (1 - p_rep_d) * Zd), lower = 0)
   }
 }
