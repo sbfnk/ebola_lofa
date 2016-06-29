@@ -116,12 +116,6 @@ delay_dates <- delay_dates %>%
 
 input <- list(admission_delay = delay_dates %>% select(nr, value))
 
-master_working_dir<- paste(output_dir, "libbi", sep = "/")
-suppressWarnings(dir.create(master_working_dir))
-working_dir <- paste(master_working_dir, r0_trajectory, sep = "/")
-unlink(working_dir, recursive = TRUE)
-dir.create(working_dir)
-
 if (length(output_file_name) == 0)
 {
     filebase <- "ebola_lofa"
@@ -132,6 +126,10 @@ if (length(grep("/", output_file_name)) == 0)
 {
     output_file_name <- paste(output_dir, output_file_name, sep = "/")
 }
+
+working_dir<- paste(output_file_name, sep = "/")
+unlink(working_dir, recursive = TRUE)
+dir.create(working_dir)
 
 global_options <-
     list("end-time" = max(admissions_data$nr),
@@ -257,7 +255,7 @@ if ("nparticles" %in% names(run_particle_adapted$global_options))
     nparticles <- 1
 }
 
-run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.1, max = 0.5,
+run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
                           max_iter = 10, scale = 2)
 
 cat(date(), "Sampling from the posterior distribution of the full model.\n")
@@ -388,7 +386,7 @@ if (sample_obs)
     saveRDS(p_obs$data, paste0(output_file_name, "_obs_fits.rds"))
 }
 
-if (!keep) unlink(working_folder, recursive = TRUE)
+if (!keep) unlink(working_dir, recursive = TRUE)
 
 quit()
 
