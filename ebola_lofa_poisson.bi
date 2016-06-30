@@ -1,4 +1,4 @@
-model ebola_lofa_fit {
+model ebola_lofa_poisson {
   const first_obs = 0
   const rate_multiplier = 7
   const e_rho = 2
