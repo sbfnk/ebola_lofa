@@ -290,7 +290,7 @@ saveRDS(list(nparticles = nparticles),
 res <- bi_read(read = run, thin = thin,
                vars = c(final_model$get_vars("param"),
                         final_model$get_vars("noise"),
-                        "R0",
+                        "Zh", "R0", "H", 
                         "loglikelihood", "logprior"),
                verbose = verbose)
 
@@ -353,11 +353,11 @@ saveRDS(params, paste0(output_file_name, "_params.rds"))
 if (sample_obs)
 {
     cat(date(), "Sampling from the joint distribution.\n")
-    libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
+    ## libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
 
-      ## sample_observations(run,
-      ##                     read_options = list(thin = thin, verbose = verbose),
-      ##                     add_options = list(seed = libbi_seed))
+    ## sample_observations(run,
+    ##                     read_options = list(thin = thin, verbose = verbose),
+    ##                     add_options = list(seed = libbi_seed))
     ## res_obs <- lapply(res, function(x)
     ## {
     ##   if ("nr" %in% names(x))
@@ -375,7 +375,9 @@ if (sample_obs)
       rename(Zh = value) %>%
       mutate(mean = Zh, sd = sqrt(Zh)) %>%
       mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) 
+      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) %>%
+      mutate(time = time - 1) %>%
+      filter(time >= 0)
 
     if (deaths)
     {
@@ -389,18 +391,19 @@ if (sample_obs)
     }
 
     data <- admissions_data %>%
-      select(-nr) %>% 
-##      gather(state, value, admissions:deaths) %>%
+      select(-nr) %>%
+      ##      gather(state, value, admissions:deaths) %>%
       gather(state, value, admissions) %>%
       mutate(state = stri_trans_totitle(state)) %>%
       rename(time = date)
 
     plot_args[["read"]] <- res
     plot_args[["data"]] <- data
-    plot_args[["steps"]] <- TRUE
+    plot_args[["steps"]] <- FALSE
     plot_args[["params"]] <- c()
     plot_args[["noises"]] <- c()
     plot_args[["hline"]] <- NULL
+    plot_args[["limit.to.data"]] <- TRUE
 
     p_obs <- do.call(plot_libbi, plot_args)
 
