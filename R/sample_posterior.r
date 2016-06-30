@@ -193,7 +193,7 @@ if (sample_prior)
     ## sample prior
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior", 
                    global_options = global_options, client = "sample", 
-                   working_folder = working_dir,
+                   working_folder = working_dir, time_dim = "nr", 
                    obs = obs, input = input, verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
@@ -238,7 +238,7 @@ if (length(num_particles) > 0)
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
-                   input = input, obs = obs,
+                   input = input, obs = obs, time_dim = "nr", 
                    verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
