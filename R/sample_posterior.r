@@ -123,7 +123,7 @@ input <- list(admission_delay = delay_dates %>% select(nr, value))
 if (length(output_file_name) == 0)
 {
     filebase <- "ebola_lofa"
-    output_file_name <- paste0(filebase, "_", r0_trajectory, ifelse(is.null(par_nb), "", paste0("_", par_nb)))
+    output_file_name <- paste0(filebase, "_", r0_trajectory, ifelse(length(par_nb) == 0, "", paste0("_", par_nb)))
 }
 
 if (length(grep("/", output_file_name)) == 0)
@@ -297,128 +297,128 @@ res <- bi_read(read = run, thin = thin,
                         "loglikelihood", "logprior"),
                verbose = verbose)
 
-if (is.null(par_nb))
+if (length(par_nb) == 0)
 {
-cat(date(), "Plotting.\n")
+  cat(date(), "Plotting.\n")
 
-burn <- 0.20 * num_samples
-plot_args <- list(read = res, model = final_model,
-                  density_args = list(adjust = 2), burn = burn,
-                  date.origin = as.Date("2014-06-02"),
-                  hline = c(R0 = 1), steps = TRUE, date.unit = "week",
-                  trend = "mean", plot = FALSE)
-if (sample_prior)
-{
+  burn <- 0.20 * num_samples
+  plot_args <- list(read = res, model = final_model,
+                    density_args = list(adjust = 2), burn = burn,
+                    date.origin = as.Date("2014-06-02"),
+                    hline = c(R0 = 1), steps = TRUE, date.unit = "week",
+                    trend = "mean", plot = FALSE)
+  if (sample_prior)
+  {
     plot_args[["prior"]] <- res_prior
-}
-p_param <- do.call(plot_libbi, plot_args)
-saveRDS(p_param$data, paste0(output_file_name, "_param_fits.rds"))
+  }
+  p_param <- do.call(plot_libbi, plot_args)
+  saveRDS(p_param$data, paste0(output_file_name, "_param_fits.rds"))
 
-if (!is.null(p_param[["densities"]]))
-{
+  if (!is.null(p_param[["densities"]]))
+  {
     ggsave(paste(output_file_name, "densities.pdf", sep = "_"), p_param$densities)
-}
-if (!is.null(p_param[["traces"]]))
-{
+  }
+  if (!is.null(p_param[["traces"]]))
+  {
     ggsave(paste(output_file_name, "traces.pdf", sep = "_"), p_param$traces)
-}
-if (!is.null(p_param[["correlations"]]))
-{
+  }
+  if (!is.null(p_param[["correlations"]]))
+  {
     ggsave(paste(output_file_name, "correlations.pdf", sep = "_"),
            p_param$correlations)
-}
-if (!is.null(p_param[["noises"]]))
-{
+  }
+  if (!is.null(p_param[["noises"]]))
+  {
     ggsave(paste(output_file_name, "noises.pdf", sep = "_"), p_param$noises)
-}
-if (!is.null(p_param[["likelihoods"]]))
-{
+  }
+  if (!is.null(p_param[["likelihoods"]]))
+  {
     ggsave(paste(output_file_name, "likelihoods.pdf", sep = "_"), p_param$likelihoods)
-}
-if (!is.null(p_param[["states"]]))
-{
+  }
+  if (!is.null(p_param[["states"]]))
+  {
     ggsave(paste(output_file_name, "r0.pdf", sep = "_"), p_param$states)
-}
+  }
 
-cat(date(), "..parameters.\n")
-l <- lapply(names(res), function(x) {
+  cat(date(), "..parameters.\n")
+  l <- lapply(names(res), function(x) {
     res[[x]] %>% mutate(state = x)
-})
+  })
 
-params <- rbind_all(l)
-if ("nr" %in% names(params))
-{
+  params <- rbind_all(l)
+  if ("nr" %in% names(params))
+  {
     params <- params %>%
-        filter(is.na(nr)) %>%
-        select(-nr)
-}
-
-saveRDS(params, paste0(output_file_name, "_params.rds"))
-
-if (sample_obs)
-{
-  cat(date(), "Sampling from the joint distribution.\n")
-  ## libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
-
-  ## sample_observations(run,
-  ##                     read_options = list(thin = thin, verbose = verbose),
-  ##                     add_options = list(seed = libbi_seed))
-  ## res_obs <- lapply(res, function(x)
-  ## {
-  ##   if ("nr" %in% names(x))
-  ##   {
-  ##     x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
-  ##   }
-  ## })
-
-  ## for (obs in names(res_obs))
-  ## {
-  ##   res[[obs]] <- res_obs[[obs]]
-  ## }
-
-  res$Admissions <- res$Zh %>%
-    rename(Zh = value) %>%
-    mutate(mean = Zh, sd = sqrt(Zh)) %>%
-    mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-    mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) %>%
-    mutate(time = time - 1) %>%
-    filter(time >= 0)
-
-  if (deaths)
-  {
-    res$Deaths <- res$Zd %>%
-      rename(Zd = value) %>%
-      left_join(res$p_rep_d %>% rename(rep_d = value), by = "np") %>%
-      mutate(mean = Zd, sd = sqrt(rep_d * (1 - rep_d) * Zd)) %>%
-      mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-      mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd))
+      filter(is.na(nr)) %>%
+      select(-nr)
   }
 
-  data <- admissions_data %>%
-    select(-nr) %>%
-    ##      gather(state, value, admissions:deaths) %>%
-    gather(state, value, admissions) %>%
-    mutate(state = stri_trans_totitle(state)) %>%
-    rename(time = date)
+  saveRDS(params, paste0(output_file_name, "_params.rds"))
 
-  plot_args[["read"]] <- res
-  plot_args[["data"]] <- data
-  plot_args[["steps"]] <- FALSE
-  plot_args[["params"]] <- c()
-  plot_args[["noises"]] <- c()
-  plot_args[["hline"]] <- NULL
-  plot_args[["limit.to.data"]] <- TRUE
-
-  p_obs <- do.call(plot_libbi, plot_args)
-
-  if (!is.null(p_obs[["states"]]))
+  if (sample_obs)
   {
-    ggsave(paste(output_file_name, "states.pdf", sep = "_"), p_obs$states)
-  }
+    cat(date(), "Sampling from the joint distribution.\n")
+    ## libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
 
-  saveRDS(p_obs$data, paste0(output_file_name, "_obs_fits.rds"))
-}
+    ## sample_observations(run,
+    ##                     read_options = list(thin = thin, verbose = verbose),
+    ##                     add_options = list(seed = libbi_seed))
+    ## res_obs <- lapply(res, function(x)
+    ## {
+    ##   if ("nr" %in% names(x))
+    ##   {
+    ##     x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
+    ##   }
+    ## })
+
+    ## for (obs in names(res_obs))
+    ## {
+    ##   res[[obs]] <- res_obs[[obs]]
+    ## }
+
+    res$Admissions <- res$Zh %>%
+      rename(Zh = value) %>%
+      mutate(mean = Zh, sd = sqrt(Zh)) %>%
+      mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) %>%
+      mutate(time = time - 1) %>%
+      filter(time >= 0)
+
+    if (deaths)
+    {
+      res$Deaths <- res$Zd %>%
+        rename(Zd = value) %>%
+        left_join(res$p_rep_d %>% rename(rep_d = value), by = "np") %>%
+        mutate(mean = Zd, sd = sqrt(rep_d * (1 - rep_d) * Zd)) %>%
+        mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+        mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+        mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd))
+    }
+
+    data <- admissions_data %>%
+      select(-nr) %>%
+      ##      gather(state, value, admissions:deaths) %>%
+      gather(state, value, admissions) %>%
+      mutate(state = stri_trans_totitle(state)) %>%
+      rename(time = date)
+
+    plot_args[["read"]] <- res
+    plot_args[["data"]] <- data
+    plot_args[["steps"]] <- FALSE
+    plot_args[["params"]] <- c()
+    plot_args[["noises"]] <- c()
+    plot_args[["hline"]] <- NULL
+    plot_args[["limit.to.data"]] <- TRUE
+
+    p_obs <- do.call(plot_libbi, plot_args)
+
+    if (!is.null(p_obs[["states"]]))
+    {
+      ggsave(paste(output_file_name, "states.pdf", sep = "_"), p_obs$states)
+    }
+
+    saveRDS(p_obs$data, paste0(output_file_name, "_obs_fits.rds"))
+  }
 } else
 {
   saveRDS(res, paste0(output_file_name, ".rds"))
