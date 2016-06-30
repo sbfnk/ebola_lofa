@@ -20,6 +20,7 @@ Options:
 -l --sample-observations                     sample observations
 -d --daily                                   daily time steps
 -a --deaths                                  fit to deaths
+-m --model-file=<model.file>                  given model file (means there will be no adaptation step)
 -k --keep                                    keep working directory
 -f --force                                   force overwrite
 -v --verbose                                 be verbose
