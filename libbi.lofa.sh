@@ -2,7 +2,6 @@
 #$ -N lofa
 #$ -V -cwd
 #$ -M sebastian.funk@lshtm.ac.uk
-#$ -m beas
 #$ -l mem_free=4000M,h_vmem=8000M
 #$ -pe smp 4
 #$ -q parallel.q
