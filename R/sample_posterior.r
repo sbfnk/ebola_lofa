@@ -24,6 +24,7 @@ Options:
 -k --keep                                    keep working directory
 -f --force                                   force overwrite
 -v --verbose                                 be verbose
+-b --parallel-number                         parallel number
 -h --help                                    show this message" -> doc
 
 opts <- docopt(doc)
@@ -54,6 +55,7 @@ keep <- opts[["keep"]]
 deaths <- opts[["deaths"]]
 verbose <- opts[["verbose"]]
 daily <- opts[["daily"]]
+par_nb <- as.integer(opts[["parallel-number"]])
 
 library('dplyr')
 library('tidyr')
@@ -121,7 +123,7 @@ input <- list(admission_delay = delay_dates %>% select(nr, value))
 if (length(output_file_name) == 0)
 {
     filebase <- "ebola_lofa"
-    output_file_name <- paste(filebase, r0_trajectory, sep = "_")
+    output_file_name <- paste0(filebase, "_", r0_trajectory, ifelse(is.null(par_nb), "", paste0("_", par_nb)))
 }
 
 if (length(grep("/", output_file_name)) == 0)
@@ -291,10 +293,12 @@ saveRDS(list(nparticles = nparticles),
 res <- bi_read(read = run, thin = thin,
                vars = c(final_model$get_vars("param"),
                         final_model$get_vars("noise"),
-                        "Zh", "R0", "H", 
+                        "Zh", "R0", "H",
                         "loglikelihood", "logprior"),
                verbose = verbose)
 
+if (is.null(par_nb))
+{
 cat(date(), "Plotting.\n")
 
 burn <- 0.20 * num_samples
@@ -353,69 +357,72 @@ saveRDS(params, paste0(output_file_name, "_params.rds"))
 
 if (sample_obs)
 {
-    cat(date(), "Sampling from the joint distribution.\n")
-    ## libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
+  cat(date(), "Sampling from the joint distribution.\n")
+  ## libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
 
-    ## sample_observations(run,
-    ##                     read_options = list(thin = thin, verbose = verbose),
-    ##                     add_options = list(seed = libbi_seed))
-    ## res_obs <- lapply(res, function(x)
-    ## {
-    ##   if ("nr" %in% names(x))
-    ##   {
-    ##     x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
-    ##   }
-    ## })
+  ## sample_observations(run,
+  ##                     read_options = list(thin = thin, verbose = verbose),
+  ##                     add_options = list(seed = libbi_seed))
+  ## res_obs <- lapply(res, function(x)
+  ## {
+  ##   if ("nr" %in% names(x))
+  ##   {
+  ##     x <- x %>% mutate(nr = nr - 1) %>% filter(nr >= 0)
+  ##   }
+  ## })
 
-    ## for (obs in names(res_obs))
-    ## {
-    ##   res[[obs]] <- res_obs[[obs]]
-    ## }
+  ## for (obs in names(res_obs))
+  ## {
+  ##   res[[obs]] <- res_obs[[obs]]
+  ## }
 
-    res$Admissions <- res$Zh %>%
-      rename(Zh = value) %>%
-      mutate(mean = Zh, sd = sqrt(Zh)) %>%
+  res$Admissions <- res$Zh %>%
+    rename(Zh = value) %>%
+    mutate(mean = Zh, sd = sqrt(Zh)) %>%
+    mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+    mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) %>%
+    mutate(time = time - 1) %>%
+    filter(time >= 0)
+
+  if (deaths)
+  {
+    res$Deaths <- res$Zd %>%
+      rename(Zd = value) %>%
+      left_join(res$p_rep_d %>% rename(rep_d = value), by = "np") %>%
+      mutate(mean = Zd, sd = sqrt(rep_d * (1 - rep_d) * Zd)) %>%
       mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd)) %>%
-      mutate(time = time - 1) %>%
-      filter(time >= 0)
+      mutate(sd = ifelse(sd < 1, 1, sd)) %>%
+      mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd))
+  }
 
-    if (deaths)
-    {
-      res$Deaths <- res$Zd %>%
-        rename(Zd = value) %>%
-        left_join(res$p_rep_d %>% rename(rep_d = value), by = "np") %>%
-        mutate(mean = Zd, sd = sqrt(rep_d * (1 - rep_d) * Zd)) %>%
-        mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-          mutate(sd = ifelse(sd < 1, 1, sd)) %>%
-        mutate(value = rtruncnorm(n(), 0, mean = mean, sd = sd))
-    }
+  data <- admissions_data %>%
+    select(-nr) %>%
+    ##      gather(state, value, admissions:deaths) %>%
+    gather(state, value, admissions) %>%
+    mutate(state = stri_trans_totitle(state)) %>%
+    rename(time = date)
 
-    data <- admissions_data %>%
-      select(-nr) %>%
-      ##      gather(state, value, admissions:deaths) %>%
-      gather(state, value, admissions) %>%
-      mutate(state = stri_trans_totitle(state)) %>%
-      rename(time = date)
+  plot_args[["read"]] <- res
+  plot_args[["data"]] <- data
+  plot_args[["steps"]] <- FALSE
+  plot_args[["params"]] <- c()
+  plot_args[["noises"]] <- c()
+  plot_args[["hline"]] <- NULL
+  plot_args[["limit.to.data"]] <- TRUE
 
-    plot_args[["read"]] <- res
-    plot_args[["data"]] <- data
-    plot_args[["steps"]] <- FALSE
-    plot_args[["params"]] <- c()
-    plot_args[["noises"]] <- c()
-    plot_args[["hline"]] <- NULL
-    plot_args[["limit.to.data"]] <- TRUE
+  p_obs <- do.call(plot_libbi, plot_args)
 
-    p_obs <- do.call(plot_libbi, plot_args)
+  if (!is.null(p_obs[["states"]]))
+  {
+    ggsave(paste(output_file_name, "states.pdf", sep = "_"), p_obs$states)
+  }
 
-    if (!is.null(p_obs[["states"]]))
-    {
-      ggsave(paste(output_file_name, "states.pdf", sep = "_"), p_obs$states)
-    }
-
-    saveRDS(p_obs$data, paste0(output_file_name, "_obs_fits.rds"))
+  saveRDS(p_obs$data, paste0(output_file_name, "_obs_fits.rds"))
 }
-
+} else
+{
+  saveRDS(res, paste0(output_file_name, ".rds"))
+}
 if (!keep) unlink(working_dir, recursive = TRUE)
 
 quit()
