@@ -177,7 +177,7 @@ if (r0_trajectory == "exponential")
 } else if (r0_trajectory == "independent")
 {
     r0_update_lines <- c("n_R0_walk ~ gaussian()",
-                         "R0 <- max(0, p_initR0 + n_R0_walk * p_vol_R0)")
+                         "R0 <- max(0, p_R0 + n_R0_walk * p_vol_R0)")
 } else
 {
     stop("'r0_trajectory' must be one of {exponential,bounded,independent)")
@@ -191,9 +191,9 @@ if (sample_prior)
     libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
     global_options[["seed"]] <- libbi_seed
     ## sample prior
-    prior <- libbi(model = ebola_model, run = TRUE, target = "prior", 
-                   global_options = global_options, client = "sample", 
-                   working_folder = working_dir, time_dim = "nr", 
+    prior <- libbi(model = ebola_model, run = TRUE, target = "prior",
+                   global_options = global_options, client = "sample",
+                   working_folder = working_dir, time_dim = "nr",
                    obs = obs, input = input, verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
