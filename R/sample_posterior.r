@@ -297,6 +297,8 @@ res <- bi_read(read = run, thin = thin,
                         "loglikelihood", "logprior"),
                verbose = verbose)
 
+
+
 if (length(par_nb) == 0)
 {
   cat(date(), "Plotting.\n")
@@ -423,6 +425,7 @@ if (length(par_nb) == 0)
 {
   saveRDS(res, paste0(output_file_name, ".rds"))
 }
+
 if (!keep) unlink(working_dir, recursive = TRUE)
 
 quit()
