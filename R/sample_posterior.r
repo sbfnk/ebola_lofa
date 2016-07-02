@@ -24,7 +24,7 @@ Options:
 -k --keep                                    keep working directory
 -f --force                                   force overwrite
 -v --verbose                                 be verbose
--b --parallel-number                         parallel number
+-b --parallel-number=<number>                parallel number
 -h --help                                    show this message" -> doc
 
 opts <- docopt(doc)
