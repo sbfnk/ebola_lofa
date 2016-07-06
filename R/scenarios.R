@@ -54,6 +54,9 @@ posterior$R0[, time := time - 1]
 posterior$R0 <- posterior$R0[time >= 0]
 posterior$H[, time := time - 1]
 posterior$H <- posterior$H[time >= 0]
+posterior$n_admission[, time := time - 1]
+posterior$n_admission <- posterior$n_admission[time >= 0]
+
 
 ## read bed capacity
 bed_filename <- paste0("lofa_etc_weekly.rds")
@@ -65,17 +68,20 @@ bed_availability[, time := seq_len(nrow(bed_availability)) - 1]
 ## combine original input file with R0 trajectories from the posterior
 input <- list(R0 = posterior$R0,
               H = posterior$H,
-              K = bed_availability[, list(time, value = available.ebola)], 
-              admission_delay = delay_dates %>% select(time, value))
+              K = bed_availability[, list(time, value = available.ebola)],
+              admission_delay = delay_dates %>% select(time, value),
+              late_increase = 1,
+              n_admission = posterior$n_admission)
 
 ## get model
-ebola_model <- bi_model(paste0(code_dir, "ebola_lofa_fit.bi"))
+ebola_model <- bi_model(paste0(code_dir, "ebola_lofa_sim.bi"))
 
 ## remove R0 assign line, this is now from the input file
 r0_assign_line <- grep("^[[:space:]]*R0[[:space:]]*<-", ebola_model$get_lines())
 ebola_model$remove_lines(r0_assign_line)
-ebola_model$remove_block("initial")
 ebola_model$remove_block("parameter")
+ebola_model$fix(delta = 1 / (2 * 2.302684) * 7,
+                theta = 1 / (2 * 1.279192) * 7)
 
 ## remove R0 from init file
 posterior[["R0"]] <- NULL
@@ -84,6 +90,7 @@ posterior[["p_R0"]] <- NULL
 posterior[["n_R0_walk"]] <- NULL
 posterior[["H"]] <- NULL
 posterior[["Zh"]] <- NULL
+posterior[["n_admission"]] <- NULL
 
 scenarios <- list()
 
@@ -103,10 +110,12 @@ scenarios[[scenario]][["K"]][, value := value[1]]
 scenario <- 2
 
 scenarios[[scenario]] <- copy(input)
-scenarios[[scenario]][["H"]] <-
-  merge(scenarios[[scenario]][["H"]], scenarios[[scenario]][["H"]][time == 0, list(constant_value = value), by = c("np")], by = c("np"))
-scenarios[[scenario]][["H"]][, value := constant_value]
-scenarios[[scenario]][["H"]][, constant_value := NULL]
+H_week_1 <- scenarios[[scenario]][["H"]][time == 0, list(np = np, new_value = value)]
+scenarios[[scenario]][["H"]] <- merge(scenarios[[scenario]][["H"]], H_week_1, by = c("np"), all.x = TRUE)
+scenarios[[scenario]][["H"]] <- scenarios[[scenario]][["H"]][, list(time, np, value, new_value)]
+setkey(scenarios[[scenario]][["H"]], time, np)
+scenarios[[scenario]][["H"]][time > 0, value := new_value]
+scenarios[[scenario]][["H"]][, new_value := NULL]
 
 ############################################################################
 ## scenario 3: behaviour as in week 2                                     ##
@@ -158,7 +167,7 @@ scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := c(value[1:2], value[seq_len(length(value) - 2)])]
 
 ############################################################################
-## scenario 6: excatly the same                                           ##
+## scenario 6: exactly the same                                           ##
 ############################################################################
 
 scenario <- 6
@@ -166,47 +175,76 @@ scenario <- 6
 scenarios[[scenario]] <- copy(input)
 
 ############################################################################
+## scenario 7: enough beds for everyone
+############################################################################
+
+scenario <- 7
+
+scenarios[[scenario]] <- copy(input)
+scenarios[[scenario]][["K"]][, value := 1e+7]
+
+############################################################################
 ## simulate all scenarios                                                 ##
 ############################################################################
 
+sim_scenarios <- list()
 for (scenario in seq_along(scenarios))
 {
+
+    cat("Scenario ", scenario, "\n")
     global_options <-
         list("end-time" = 21,
              "start-time" = 0,
              noutputs = 21,
-             nsamples = max(input$H$np), 
-             nthreads = 1,
+             nsamples = max(input$H$np) + 1, 
              target = "joint")
-    output_file_name <- paste(output_folder,
-                              paste0("joint_lofa_scenario_", scenario, ".nc"),
-                              sep = "/")
-
     system.time({
         run_joint <- libbi(client = "sample", model = ebola_model,
                            global_options = global_options, run = TRUE,
                            working_folder = working_folder,
-                           output_file_name = output_file_name,
-                           verbose = TRUE,
                            input = scenarios[[scenario]],
                            init = posterior)
     })
-
+    sim_scenarios[[scenario]] <- bi_read(run_joint)
 }
 
-results <- list()
-
-fit_file <- "fit_lofa_bounded_joint.nc"
-res <- bi_read(paste(output_folder, fit_file, sep = "/"), vars = c("Inc", "Deaths", "Zc"))
-results[[fit_file]] <- lapply(res, data.table)
-
-for (file in paste(output_folder,
-                   paste0("joint_lofa_scenario_", seq_along(scenarios), ".nc"),
-                   sep = "/"))
-{
-    res <- bi_read(file, vars = c("Inc", "Deaths", "Zc"))
-    results[[file]] <- lapply(res, data.table)
+state_scenarios <- list()
+for (i in length(sim_scenarios)) {
+    for (j in names(sim_scenarios[[i]])) {
+        sim_scenarios[[i]][[j]] <- data.table(sim_scenarios[[i]][[j]])
+        if ("time" %in% colnames(sim_scenarios[[i]][[j]])) {
+            sim_scenarios[[i]][[j]] <- sim_scenarios[[i]][[j]][, list(value = sum(value)), by = list(time, np)]
+            state_scenarios <- c(state_scenarios, list(sim_scenarios[[i]][[j]]))
+        }
+        sim_scenarios[[i]][[j]][, scenario := i]
+        sim_scenarios[[i]][[j]][, state := j]
+    }
 }
 
-saveRDS(results, "lofa_scenarios.rds")
+all_scenarios <- rbindlist(state_scenarios)
 
+saveRDS(all_scenarios, "lofa_scenarios.rds")
+
+admissions_no_change <- all_scenarios[scenario %in% c(6,7) & state == "Admissions",
+                                      list(mean = mean(value),
+                                           min.1 = quantile(value, 0.25),
+                                           max.1 = quantile(value, 0.75),
+                                           min.2 = quantile(value, 0.025),
+                                           max.2 = quantile(value, 0.975)),
+                                      by = list(scenario, time)]
+
+admissions <- all_scenarios[state == "Admissions",
+                            list(mean = mean(value),
+                                 min.1 = quantile(value, 0.25),
+                                 max.1 = quantile(value, 0.75),
+                                 min.2 = quantile(value, 0.025),
+                                 max.2 = quantile(value, 0.975)),
+                            by = list(scenario, time)]
+
+cases <- all_scenarios[state == "Zc",
+                       list(mean = mean(value),
+                            min.1 = quantile(value, 0.25),
+                            max.1 = quantile(value, 0.75),
+                            min.2 = quantile(value, 0.025),
+                            max.2 = quantile(value, 0.975)),
+                       by = list(scenario, time)]

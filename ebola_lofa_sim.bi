@@ -1,7 +1,7 @@
 model ebola_lofa_sim {
 
   const first_obs = 0
-  const rate_multiplier = 1
+  const rate_multiplier = 7
  
   const e_rho = 2
   const e_gamma = 3
@@ -9,9 +9,9 @@ model ebola_lofa_sim {
   const e_kappa = 2
   const e_theta = 10
 
-  input admission_delay
-  input K
-  input late_increase
+  state admission_delay
+  state K
+  state late_increase
 
   dim rho_erlang(e_rho)
   dim gamma_erlang(e_gamma)
@@ -31,28 +31,24 @@ model ebola_lofa_sim {
 
   param p_rep_d
 
-  state S (has_output = 0)
-  state E[rho_erlang] (has_output = 0)
-  state Ic[gamma_erlang] (has_output = 0)
-  state Ih[gamma_erlang,kappa_erlang] (has_output = 0)
-  state Hr[theta_erlang] (has_output = 0)
-  state Hd[delta_erlang] (has_output = 0)
-  state Bc (has_output = 0)
-  state Zc (has_output = 0)
+  state S
+  state E[rho_erlang]
+  state Ic[gamma_erlang]
+  state Ih[gamma_erlang,kappa_erlang]
+  state Hr[theta_erlang]
+  state Hd[delta_erlang]
+  state Bc
+  state Zc
   state Zh
   state Zd
   state R0
   state H
-  state K_track
-  state late_track
 
   obs Admissions
 
-  noise n_admission
+  state n_admission
 
   sub transition {
-
-    n_admission ~ gamma(shape = 100, scale = 0.01)
 
     Zc <- 0
     Zh <- 0
@@ -60,8 +56,6 @@ model ebola_lofa_sim {
 
     inline kappa = 1 / admission_delay * rate_multiplier
     inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
-    K_track <- K
-    late_track <- late_increase
 
     ode {
 
@@ -119,8 +113,8 @@ model ebola_lofa_sim {
     p_alpha <- 1 * rate_multiplier
     p_cfr <- 0.6695464
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
-    p_theta <- 1 / (e_theta * 1.279192) * 7
-    p_delta <- 1 / (e_delta * 2.302684) * 7
+    p_theta <- 1 / (e_theta * 1.279192) * rate_multiplier
+    p_delta <- 1 / (e_delta * 2.302684) * rate_multiplier
     p_Inf ~ uniform(0, 100)
     p_rep_d ~ uniform(0, 1)
   }
