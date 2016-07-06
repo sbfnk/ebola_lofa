@@ -40,7 +40,6 @@ model ebola_lofa_sim {
   state Bc
   state Zc
   state Zh
-  state Zd
   state R0
   state H
 
@@ -52,7 +51,6 @@ model ebola_lofa_sim {
 
     Zc <- 0
     Zh <- 0
-    Zd <- 0
 
     inline kappa = 1 / admission_delay * rate_multiplier
     inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
@@ -124,7 +122,6 @@ model ebola_lofa_sim {
     Hd[delta_erlang] <- 0
     Bc <- 0
     Zc <- 0
-    Zd <- 0
     Zh <- 0
   }
 
