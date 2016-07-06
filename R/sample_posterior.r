@@ -307,14 +307,15 @@ final_model <- run$model
 saveRDS(list(nparticles = nparticles),
         file = paste0(output_file_name, "_args.rds"))
 
-res <- bi_read(read = run, thin = thin,
-               vars = c(final_model$get_vars("param"),
-                        final_model$get_vars("noise"),
-                        "Zh", "R0", "H",
-                        "loglikelihood", "logprior"),
-               verbose = verbose)
+read_options <- list(read = run, 
+                     vars = c(final_model$get_vars("param"),
+                              final_model$get_vars("noise"),
+                              "Zh", "R0", "H",
+                              "loglikelihood", "logprior"),
+                     verbose = verbose)
+if (length(thin) > 0) read_options[["thin"]] <- thin
 
-
+res <- do.call(bi_read, read_options)
 
 if (length(par_nb) == 0)
 {
