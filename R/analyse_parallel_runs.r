@@ -13,7 +13,7 @@ res <- list()
 for (i in seq_len(n_traj))
 {
     filename <-
-        paste("~/Data/Ebola/Lofa/ebola_lofa_independent_5_poisson", i, sep = "_")
+        paste("~/Data/Ebola/Lofa/ebola_lofa_independent_poisson", i, sep = "_")
     res[[i]] <- readRDS(paste(filename, "rds", sep = "."))
     model <- bi_model(paste(filename, "bi", sep = "."))
     traces[[i]] <- mcmc(get_traces(res[[i]], model = model))
