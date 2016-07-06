@@ -277,8 +277,13 @@ if ("nparticles" %in% names(run_particle_adapted$global_options))
     nparticles <- 1
 }
 
-run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
-                          max_iter = 10, scale = 2)
+if (length(model_file) == 0)
+{
+  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
+                            max_iter = 10, scale = 2)
+} else {
+  run_adapted <- run_particle_adapted
+}
 
 cat(date(), "Sampling from the posterior distribution of the full model.\n")
 libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
@@ -290,8 +295,8 @@ run$run(add_options = list("init-np" = pre_samples - 1,
 
 if (length(model_file) == 0)
 {
-    model_file <- paste(output_file_name, "bi", sep = ".")
-    run$model$write_model_file(model_file)
+    model_file_name <- paste(output_file_name, "bi", sep = ".")
+    run$model$write_model_file(model_file_name)
 }
 
 command_file <- paste(output_file_name, "cmd", sep = ".")
