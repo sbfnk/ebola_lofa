@@ -173,7 +173,7 @@ if (length(late_increase) > 0)
 
 if (!deaths)
 {
-    ebola_model$fix(p_rep_d = 01)
+    ebola_model$fix(p_rep_d = 0)
 }
 
 ## find line where we want to insert the R0 trajectory
