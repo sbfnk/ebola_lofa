@@ -323,7 +323,7 @@ if (length(par_nb) == 0)
 {
   cat(date(), "Plotting.\n")
 
-  burn <- 0.20 * num_samples
+  burn <- 0.20 * num_samples / ifelse(length(thin) > 0, thin, 1)
   plot_args <- list(read = res, model = final_model,
                     density_args = list(adjust = 2), burn = burn,
                     date.origin = as.Date("2014-06-02"),
