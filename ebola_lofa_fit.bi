@@ -71,10 +71,10 @@ model ebola_lofa_fit {
     ode {
 
       dS/dt =
-      - beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + late_increase * (Ic[2] + Ih[2,0] + Ih[2,1] + Bc)) / p_N * S
+      - beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + Ic[2] + Ih[2,0] + Ih[2,1] + Bc) / p_N * S
 
       dE[rho_erlang]/dt =
-      + (rho_erlang == 0 ? beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + late_increase * (Ic[2] + Ih[2,0] + Ih[2,1] + Bc)) / p_N * S : 0)
+      + (rho_erlang == 0 ? beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + Ic[2] + Ih[2,0] + Ih[2,1] + Bc) / p_N * S : 0)
       + (rho_erlang > 0 ? e_rho * p_rho * E[rho_erlang - 1] : 0)
       - e_rho * p_rho * E[rho_erlang]
 
