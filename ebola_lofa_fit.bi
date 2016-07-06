@@ -100,9 +100,7 @@ model ebola_lofa_fit {
       + e_rho * p_rho * E[e_rho - 1]
 
       dZh/dt =
-      + e_kappa * kappa * Ih[0,e_kappa - 1] * n_admission
-      + e_kappa * kappa * Ih[1,e_kappa - 1] * n_admission
-      + e_kappa * kappa * Ih[2,e_kappa - 1] * n_admission
+      + e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission
 
       dZd/dt =
       + e_gamma * p_gamma * (Ih[e_gamma - 1,0] + Ih[e_gamma - 1,1])
