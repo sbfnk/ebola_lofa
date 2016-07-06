@@ -12,6 +12,7 @@ Options:
 -p --presamples=<pre.samples>                number of preparatory samples to obtain
 -r --r0-trajectory=<trajectory>              R0 trajectory: exponential, bounded or independent
 -t --threads=<num.threads>                   number of threads
+-g --late-increase=<factor>                  late increase in transmission rate
 -e --seed=<seed>                             random seed
 -o --output-file=<output.file>               output file name
 -y --toy                                     use toy data
@@ -44,6 +45,7 @@ num_particles <- as.integer(opts[["nparticles"]])
 pre_samples <- as.integer(opts[["presamples"]])
 r0_trajectory <- opts[["r0-trajectory"]]
 num_threads <- as.integer(opts[["threads"]])
+late_increase <- as.integer(opts[["late-increase"]])
 seed <- as.integer(opts[["seed"]])
 output_file_name <- opts[["output-file"]]
 thin <- as.integer(opts[["thin"]])
@@ -160,6 +162,15 @@ if (verbose) ## all states
 
 ebola_model$fix(rate_multiplier = rate_multiplier)
 
+init <- list()
+if (length(late_increase) > 0)
+{
+    init <- c(init, list(late_increase = late_increase))
+} else
+{
+    init <- c(init, list(late_increase = 1))
+}
+
 if (!deaths)
 {
     ebola_model$fix(p_rep_d = 01)
@@ -196,7 +207,8 @@ if (sample_prior)
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior",
                    global_options = global_options, client = "sample",
                    working_folder = working_dir, time_dim = "nr",
-                   obs = obs, input = input, verbose = verbose)
+                   obs = obs, input = input, init = init,
+                   verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
                          verbose = verbose)
@@ -240,8 +252,8 @@ if (length(num_particles) > 0)
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
-                   input = input, obs = obs, time_dim = "nr", 
-                   verbose = verbose)
+                   input = input, obs = obs, init = init,
+                   time_dim = "nr", verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
 run_prior <- adapt_mcmc(run_prior, min = 0, max = 1)
