@@ -19,6 +19,8 @@ model ebola_lofa_fit {
   param p_cfr // case-fatality rate
   param p_alpha // rate of burial
 
+  param late_increase
+
   param p_Inf
   param p_R0
 
@@ -71,10 +73,10 @@ model ebola_lofa_fit {
     ode {
 
       dS/dt =
-      - beta * (Ic[0] + Ic[1] + Ic[2] + Ih[0,0] + Ih[1,0] + Ih[2,0] + Ih[0,1] + Ih[1,1] + Ih[1,2] + Bc) / p_N * S
+      - beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + late_increase * (Ic[2] + Ih[2,0] + Ih[2,1] + Bc)) / p_N * S
 
       dE[rho_erlang]/dt =
-      + (rho_erlang == 0 ? beta * (Ic[0] + Ic[1] + Ic[2] + Ih[0,0] + Ih[1,0] + Ih[2,0] + Ih[0,1] + Ih[1,1] + Ih[1,2] + Bc) / p_N * S : 0)
+      + (rho_erlang == 0 ? beta * (Ic[0] + Ih[0,0] + Ih[0,1] + Ic[1] + Ih[1,0] + Ih[1,1] + late_increase * (Ic[2] + Ih[2,0] + Ih[2,1] + Bc)) / p_N * S : 0)
       + (rho_erlang > 0 ? e_rho * p_rho * E[rho_erlang - 1] : 0)
       - e_rho * p_rho * E[rho_erlang]
 
@@ -98,9 +100,7 @@ model ebola_lofa_fit {
       + e_rho * p_rho * E[e_rho - 1]
 
       dZh/dt =
-      + e_kappa * kappa * Ih[0,e_kappa - 1] * n_admission
-      + e_kappa * kappa * Ih[1,e_kappa - 1] * n_admission
-      + e_kappa * kappa * Ih[2,e_kappa - 1] * n_admission
+      + e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission
 
       dZd/dt =
       + e_gamma * p_gamma * (Ih[e_gamma - 1,0] + Ih[e_gamma - 1,1])
@@ -116,7 +116,7 @@ model ebola_lofa_fit {
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
     p_Inf ~ uniform(0, 100)
     p_R0 ~ uniform(0, 10)
-    p_vol_R0 ~ uniform(0, 1)
+    p_vol_R0 ~ uniform(0, 5)
     p_early_H ~ uniform(0, 1)
     p_late_H ~ uniform(0, 1)
     p_H_tau ~ uniform(0, 21)

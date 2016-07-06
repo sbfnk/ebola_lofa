@@ -12,6 +12,7 @@ Options:
 -p --presamples=<pre.samples>                number of preparatory samples to obtain
 -r --r0-trajectory=<trajectory>              R0 trajectory: exponential, bounded or independent
 -t --threads=<num.threads>                   number of threads
+-g --late-increase=<factor>                  late increase in transmission rate
 -e --seed=<seed>                             random seed
 -o --output-file=<output.file>               output file name
 -y --toy                                     use toy data
@@ -20,7 +21,7 @@ Options:
 -l --sample-observations                     sample observations
 -d --daily                                   daily time steps
 -a --deaths                                  fit to deaths
--m --model-file=<model.file>                  given model file (means there will be no adaptation step)
+-m --model-file=<model.file>                 given model file (means there will be no adaptation step)
 -k --keep                                    keep working directory
 -f --force                                   force overwrite
 -v --verbose                                 be verbose
@@ -44,6 +45,7 @@ num_particles <- as.integer(opts[["nparticles"]])
 pre_samples <- as.integer(opts[["presamples"]])
 r0_trajectory <- opts[["r0-trajectory"]]
 num_threads <- as.integer(opts[["threads"]])
+late_increase <- as.integer(opts[["late-increase"]])
 seed <- as.integer(opts[["seed"]])
 output_file_name <- opts[["output-file"]]
 thin <- as.integer(opts[["thin"]])
@@ -160,9 +162,18 @@ if (verbose) ## all states
 
 ebola_model$fix(rate_multiplier = rate_multiplier)
 
+init <- list()
+if (length(late_increase) > 0)
+{
+    init <- c(init, list(late_increase = late_increase))
+} else
+{
+    init <- c(init, list(late_increase = 1))
+}
+
 if (!deaths)
 {
-    ebola_model$fix(p_rep_d = 01)
+    ebola_model$fix(p_rep_d = 0)
 }
 
 ## find line where we want to insert the R0 trajectory
@@ -196,7 +207,8 @@ if (sample_prior)
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior",
                    global_options = global_options, client = "sample",
                    working_folder = working_dir, time_dim = "nr",
-                   obs = obs, input = input, verbose = verbose)
+                   obs = obs, input = input, init = init,
+                   verbose = verbose)
     ## reading
     res_prior <- bi_read(prior, vars = ebola_model$get_vars("param"),
                          verbose = verbose)
@@ -240,8 +252,8 @@ if (length(num_particles) > 0)
 run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
-                   input = input, obs = obs, time_dim = "nr", 
-                   verbose = verbose)
+                   input = input, obs = obs, init = init,
+                   time_dim = "nr", verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
 run_prior <- adapt_mcmc(run_prior, min = 0, max = 1)
@@ -265,8 +277,15 @@ if ("nparticles" %in% names(run_particle_adapted$global_options))
     nparticles <- 1
 }
 
-run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
-                          max_iter = 10, scale = 2)
+if (length(model_file) == 0)
+{
+  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
+                            max_iter = 10, scale = 2)
+  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
+                            max_iter = 10, scale = 2, correlations = TRUE)
+} else {
+  run_adapted <- run_particle_adapted
+}
 
 cat(date(), "Sampling from the posterior distribution of the full model.\n")
 libbi_seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
@@ -278,8 +297,8 @@ run$run(add_options = list("init-np" = pre_samples - 1,
 
 if (length(model_file) == 0)
 {
-    model_file <- paste(output_file_name, "bi", sep = ".")
-    run$model$write_model_file(model_file)
+    model_file_name <- paste(output_file_name, "bi", sep = ".")
+    run$model$write_model_file(model_file_name)
 }
 
 command_file <- paste(output_file_name, "cmd", sep = ".")
@@ -290,12 +309,15 @@ final_model <- run$model
 saveRDS(list(nparticles = nparticles),
         file = paste0(output_file_name, "_args.rds"))
 
-res <- bi_read(read = run, thin = thin,
-               vars = c(final_model$get_vars("param"),
-                        final_model$get_vars("noise"),
-                        "Zh", "R0", "H",
-                        "loglikelihood", "logprior"),
-               verbose = verbose)
+read_options <- list(read = run, 
+                     vars = c(final_model$get_vars("param"),
+                              final_model$get_vars("noise"),
+                              "Zh", "R0", "H",
+                              "loglikelihood", "logprior"),
+                     verbose = verbose)
+if (length(thin) > 0) read_options[["thin"]] <- thin
+
+res <- do.call(bi_read, read_options)
 
 if (length(par_nb) == 0)
 {
@@ -423,6 +445,7 @@ if (length(par_nb) == 0)
 {
   saveRDS(res, paste0(output_file_name, ".rds"))
 }
+
 if (!keep) unlink(working_dir, recursive = TRUE)
 
 quit()
