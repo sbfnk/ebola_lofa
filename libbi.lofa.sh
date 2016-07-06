@@ -6,7 +6,7 @@
 #$ -pe smp 8
 #$ -q parallel.q
 #$ -R y
-#$ -t 1-10
+#$ -t 1-20
 
 r0_trajectory=$1
 if [ -z "$r0_trajectory" ]
