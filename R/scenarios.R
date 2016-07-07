@@ -186,8 +186,7 @@ scenarios[[scenario]][["K"]][, value := 1e+7]
 ############################################################################
 
 sim_scenarios <- list()
-## for (scenario in seq_along(scenarios))
-for (scenario in 7)
+for (scenario in seq_along(scenarios))
 {
 
     cat("Scenario ", scenario, "\n")
@@ -195,7 +194,7 @@ for (scenario in 7)
         list("end-time" = 21,
              "start-time" = 0,
              noutputs = 21,
-             nsamples = max(input$H$np) + 1, 
+             nsamples = max(input$H$np) + 1,
              target = "joint")
     system.time({
         run_joint <- libbi(client = "sample", model = ebola_model,
@@ -226,14 +225,16 @@ saveRDS(all_scenarios, "lofa_scenarios.rds")
 
 admissions_no_change <- all_scenarios[scenario %in% c(6,7) & state == "Admissions",
                                       list(mean = mean(value),
+                                           median = median(value),
                                            min.1 = quantile(value, 0.25),
                                            max.1 = quantile(value, 0.75),
                                            min.2 = quantile(value, 0.025),
                                            max.2 = quantile(value, 0.975)),
                                       by = list(scenario, time)]
 
-admissions <- all_scenarios[state == "Admissions",
+admissions <- all_scenarios[state == "Zh",
                             list(mean = mean(value),
+                                 median = median(value),
                                  min.1 = quantile(value, 0.25),
                                  max.1 = quantile(value, 0.75),
                                  min.2 = quantile(value, 0.025),
@@ -242,6 +243,7 @@ admissions <- all_scenarios[state == "Admissions",
 
 cases <- all_scenarios[state == "Zc",
                        list(mean = mean(value),
+                            median = median(value),
                             min.1 = quantile(value, 0.25),
                             max.1 = quantile(value, 0.75),
                             min.2 = quantile(value, 0.025),
@@ -250,6 +252,7 @@ cases <- all_scenarios[state == "Zc",
 
 r0 <- all_scenarios[state == "R0",
                     list(mean = mean(value),
+                         median = median(value),
                          min.1 = quantile(value, 0.25),
                          max.1 = quantile(value, 0.75),
                          min.2 = quantile(value, 0.025),
