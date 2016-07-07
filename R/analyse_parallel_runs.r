@@ -16,15 +16,7 @@ for (i in seq_len(n_traj))
         paste("~/Data/Ebola/Lofa/ebola_lofa_independent_poisson", i, sep = "_")
     res[[i]] <- readRDS(paste(filename, "rds", sep = "."))
     model <- bi_model(paste(filename, "bi", sep = "."))
-    traces[[i]] <- mcmc(get_traces(res[[i]], model = model))
-    H_traj[[i]] <- res[[i]][["H"]] %>% mutate(value = value / n_traj)
-    R_traj[[i]] <- res[[i]][["R0"]] %>% mutate(value = value / n_traj)
-}
-
-states <- list(H = bind_rows(H_traj),
-               R0 = bind_rows(R_traj))
-
-plot_libbi(states, model, steps = TRUE)
+ }
 
 z_np_translate <- NULL
 l <- lapply(names(res[[1]]), function(x) {
@@ -43,6 +35,11 @@ l <- lapply(names(res[[1]]), function(x) {
   setkey(z, np)
   z
 })
+
+names(l) <- names(res[[1]])
+
+plot_libbi(l, model, alpha = 0.5, id = 0:99)
+plot_libbi(l, model, id = 0:99, trend = NULL, quantile = NULL)
 
 names(l) <- names(res[[1]])
 saveRDS(l, "lofa_parallel_traces.rds")
