@@ -43,6 +43,10 @@ model ebola_lofa_sim {
   state R0
   state H
 
+  state kappa
+  state beta
+  state hospital_open
+
   obs Admissions
 
   state n_admission
@@ -52,9 +56,13 @@ model ebola_lofa_sim {
     Zc <- 0
     Zh <- 0
 
-    inline kappa = 1 / admission_delay * rate_multiplier
-    inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
-    inline hospital_open = Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
+    // inline kappa = 1 / admission_delay * rate_multiplier
+    // inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
+    // inline hospital_open = Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
+
+    kappa <- 1 / admission_delay * rate_multiplier
+    beta <- R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
+    hospital_open <- Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
 
     ode {
 
