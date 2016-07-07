@@ -279,9 +279,7 @@ if ("nparticles" %in% names(run_particle_adapted$global_options))
 
 if (length(model_file) == 0)
 {
-  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
-                            max_iter = 10, scale = 2)
-  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.5,
+  run_adapted <- adapt_mcmc(run_particle_adapted, min = 0.05, max = 0.4,
                             max_iter = 10, scale = 2, correlations = TRUE)
 } else {
   run_adapted <- run_particle_adapted
