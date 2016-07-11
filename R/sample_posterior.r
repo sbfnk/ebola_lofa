@@ -19,7 +19,6 @@ Options:
 -i --thin=<thin>                             thin
 -q --sample-prior                            sample prior
 -l --sample-observations                     sample observations
--d --daily                                   daily time steps
 -a --deaths                                  fit to deaths
 -m --model-file=<model.file>                 given model file (means there will be no adaptation step)
 -k --keep                                    keep working directory
@@ -56,7 +55,6 @@ sample_prior <- opts[["sample-prior"]]
 keep <- opts[["keep"]]
 deaths <- opts[["deaths"]]
 verbose <- opts[["verbose"]]
-daily <- opts[["daily"]]
 par_nb <- as.integer(opts[["parallel-number"]])
 
 library('dplyr')
@@ -78,49 +76,56 @@ if (length(seed) == 0) {
 
 set.seed(seed)
 
-rate_multiplier <- ifelse(daily, 1, 7)
+rate_multiplier <- 7 # weekly data
 
 ## read incidence data
-inc_filename <- paste0("incidence_", ifelse(daily, "daily", "weekly"), ".rds")
+inc_filename <- "lofa_incidence.rds"
 incidence <- readRDS(paste(code_dir, "data", inc_filename, sep = "/"))
 ## read admission delays
-adm_filename <- paste0("admission_delays_",
-                       ifelse(daily, "daily", "weekly"), ".rds")
+adm_filename <- paste0("lofa_admission_delays.rds")
 admission_delays <- readRDS(paste(code_dir, "data", adm_filename, sep = "/"))
-admission_delays <- admission_delays %>% 
-  mutate(admission.delay = admission.delay)
-
 admission_dates <-
-  data.frame(date = seq.Date(min_date, max_date,
-                             by = ifelse(daily, "day", "week")))
-if (!daily) {
-  admission_dates <- admission_dates %>%
-    mutate(date = date - wday(date) + 2)
-}
+  data.frame(date = seq.Date(min_date, max_date, by = "week"))
+
+admission_dates <- admission_dates %>%
+  mutate(date = date - wday(date) + 2)
+
+admissions <- incidence[["admissions"]] %>%
+  filter(classification %in% c("confirmed", "probable")) %>%
+  group_by(date) %>%
+  summarise(admissions = sum(admissions)) %>%
+  ungroup
+
+deaths <- incidence[["deaths"]] %>%
+  filter(classification %in% c("confirmed", "probable")) %>%
+  group_by(date) %>%
+  summarise(deaths = sum(deaths)) %>%
+  ungroup
+
 admissions_data <- admission_dates %>%
-  left_join(incidence[["admissions"]], by = "date") %>%
-  left_join(incidence[["deaths"]], by = "date") %>%
+  left_join(admissions, by = "date") %>%
+  left_join(deaths, by = "date") %>%
   filter(between(date, min_date, max_date)) %>%
-  mutate(nr = as.integer(((date - min(date)) / rate_multiplier + 1))) %>% 
-  mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>% 
+  mutate(week = as.integer(((date - min(date)) / rate_multiplier + 1))) %>%
+  mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>%
   mutate(deaths = ifelse(is.na(deaths), 0, deaths))
 
-obs <- list(Admissions = admissions_data %>% select(nr, value = admissions))
+obs <- list(Admissions = admissions_data %>% select(week, value = admissions))
 
-if (deaths) obs[["Deaths"]] <- admissions_data %>% select(nr, value = deaths)
+if (deaths) obs[["Deaths"]] <- admissions_data %>% select(week, value = deaths)
 
 delay_dates <-
   data_frame(date = seq.Date(min(admissions_data$date) - 7,
                              max(admissions_data$date),
-                             by = ifelse(daily, "day", "week")))
+                             by = "week"))
 delay_dates$value <-
   approx(x = admission_delays$date,
-         y = admission_delays$admission.delay,
+         y = admission_delays$median,
          xout = delay_dates$date)$y
 delay_dates <- delay_dates %>% 
-  mutate(nr = as.integer(((date - min(date)) / rate_multiplier)))
+  mutate(week = as.integer(((date - min(date)) / rate_multiplier)))
 
-input <- list(admission_delay = delay_dates %>% select(nr, value))
+input <- list(admission_delay = delay_dates %>% select(week, value))
 
 if (length(output_file_name) == 0)
 {
@@ -138,9 +143,9 @@ unlink(working_dir, recursive = TRUE)
 dir.create(working_dir)
 
 global_options <-
-    list("end-time" = max(admissions_data$nr),
+    list("end-time" = max(admissions_data$week),
          "start-time" = 0,
-         noutputs = max(admissions_data$nr), 
+         noutputs = max(admissions_data$week), 
          nsamples = pre_samples)
 
 if (length(num_threads) > 0)
@@ -206,7 +211,7 @@ if (sample_prior)
     ## sample prior
     prior <- libbi(model = ebola_model, run = TRUE, target = "prior",
                    global_options = global_options, client = "sample",
-                   working_folder = working_dir, time_dim = "nr",
+                   working_folder = working_dir, time_dim = "week",
                    obs = obs, input = input, init = init,
                    verbose = verbose)
     ## reading
@@ -253,7 +258,7 @@ run_prior <- libbi(client = "sample", model = ebola_model,
                    global_options = global_options,
                    run = TRUE, working_folder = working_dir,
                    input = input, obs = obs, init = init,
-                   time_dim = "nr", verbose = verbose)
+                   time_dim = "week", verbose = verbose)
 
 cat(date(), "Running the stochastic model.\n")
 run_prior <- adapt_mcmc(run_prior, min = 0, max = 1)
@@ -366,11 +371,11 @@ if (length(par_nb) == 0)
   })
 
   params <- rbind_all(l)
-  if ("nr" %in% names(params))
+  if ("week" %in% names(params))
   {
     params <- params %>%
-      filter(is.na(nr)) %>%
-      select(-nr)
+      filter(is.na(week)) %>%
+      select(-week)
   }
 
   saveRDS(params, paste0(output_file_name, "_params.rds"))
@@ -416,7 +421,7 @@ if (length(par_nb) == 0)
     }
 
     data <- admissions_data %>%
-      select(-nr) %>%
+      select(-week) %>%
       ##      gather(state, value, admissions:deaths) %>%
       gather(state, value, admissions) %>%
       mutate(state = stri_trans_totitle(state)) %>%
