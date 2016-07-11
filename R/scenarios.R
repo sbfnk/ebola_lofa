@@ -148,7 +148,7 @@ all_scenarios <- rbindlist(state_scenarios)
 saveRDS(all_scenarios, "lofa_scenarios.rds")
 ## all_scenarios <- readRDS
 
-admissions_no_change <- all_scenarios[scenario %in% c(6,7) & state == "Admissions",
+admissions_no_change <- all_scenarios[scenario %in% c(4,5) & state == "Admissions",
                                       list(mean = mean(value),
                                            median = median(value),
                                            min.1 = quantile(value, 0.25),
