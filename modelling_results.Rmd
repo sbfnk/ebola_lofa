@@ -1,0 +1,54 @@
+---
+title: "Reproducing the modelling results in 'Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia'"
+---
+
+```{r setup, echo = FALSE, cache = FALSE}
+knitr::opts_chunk$set(cache = TRUE, fig.cap = '', fig.align = "center", message = FALSE, tidy = TRUE, warning = FALSE)
+```
+
+# Introduction
+
+This document contains the R code necessary to reproduce the results in "Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia." All code and data used here are in a [github repository](http://github.com/sbfnk/ebola_lofa).
+
+## Required packages
+```{r install, cache = FALSE, eval = FALSE}
+cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm")
+github_packages <- c("libbi/RBi", "sbfnk/RBi.helpers")
+
+for (package in cran_packages)
+{
+    install.packages(package)
+}
+
+library('devtools')
+
+for (package in github_packages)
+{
+    install_github(package)
+}
+```
+
+# Generate MCMC chains
+
+Edit the lines starting `code_dir <- ` and `output_dir <-` in the script 'sample_posterior.r' from the R/ directory in the github repository to point to the correct directories, and run it using
+
+```{sh eval = FALSE}
+Rscript sample_posterior.r -n 10000 -p 1000 -r bounded -t $NUM_THREADS -i 10 -q -l -f -o ebola_lofa_$NB -c 16384 -b $NB
+```
+
+where you should set `$NUM_THREADS` to the number of concurrent threads to run (i.e., the number of CPU cores available) and `$NB` to a running number (1,2,3,...) for each chain to generate (100 in the manuscript).
+
+# Analyse MCMC chains
+
+Set the `output_dir` to the value used in `sample.posterior.r`
+
+```
+output_dir <- 'insert your directory here'
+```
+
+Get MCMC chains
+
+```
+
+```
+

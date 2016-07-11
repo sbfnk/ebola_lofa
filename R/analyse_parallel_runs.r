@@ -1,26 +1,29 @@
 library('RBi')
-library('coda')
 library('dplyr')
 library('tidyr')
 library('RBi.helpers')
-library('stringi')
 library('truncnorm')
 library('cowplot')
 
+output_dir <- path.expand("~/Data/Ebola/Lofa")
+
 n_traj <- 94
 
-traces <- list()
-H_traj <- list()
-R_traj <- list()
 res <- list()
+
+obs <- NULL
+input <- NULL
+data <- NULL
 
 for (i in seq_len(n_traj))
 {
-    filename <-
-        paste("~/Data/Ebola/Lofa/ebola_lofa_independent_poisson", i, sep = "_")
-    res[[i]] <- readRDS(paste(filename, "rds", sep = "."))
-    model <- bi_model(paste(filename, "bi", sep = "."))
- }
+    filename <- paste0(output_dir, "/ebola_lofa_independent_", i)
+    res[[i]] <- readRDS(paste0(filename, ".rds"))
+    model <- bi_model(paste0(filename, ".bi"))
+    if (is.null(obs)) obs <- readRDS(paste0(filename, "_obs.rds"))
+    if (is.null(input)) input <- readRDS(paste0(filename, "_input.rds"))
+    if (is.null(data)) data <- readRDS(paste0(filename, "_data.rds"))
+}
 
 z_np_translate <- NULL
 l <- lapply(names(res[[1]]), function(x) {
@@ -41,54 +44,17 @@ l <- lapply(names(res[[1]]), function(x) {
 })
 
 names(l) <- names(res[[1]])
-
-#plot_libbi(l, model, alpha = 0.5, id = 0:99)
-#plot_libbi(l, model, id = 0:99, trend = NULL, quantile = NULL)
-
-names(l) <- names(res[[1]])
 saveRDS(l, "lofa_parallel_traces.rds")
 
-est_params <- l[c("p_Inf", "p_R0", "p_vol_R0", "p_early_H", "p_late_H", "p_H_alpha", "p_H_tau")]
-est_params <- lapply(names(est_params), function(x) {est_params[[x]][, state := x]})
-lep <- rbindlist(est_params)
-mep <- data.table(dcast(lep, np ~ state))
-mep$np <- NULL
+## est_params <- l[c("p_Inf", "p_R0", "p_vol_R0", "p_early_H", "p_late_H", "p_H_alpha", "p_H_tau")]
+## est_params <- lapply(names(est_params), function(x) {est_params[[x]][, state := x]})
+## lep <- rbindlist(est_params)
+## mep <- data.table(dcast(lep, np ~ state))
+## mep$np <- NULL
 
-trace <- mcmc(mep)
+## trace <- mcmc(mep)
 
-code_dir <- path.expand("~/code/ebola_lofa/")
-output_dir <- path.expand("~/Data/Ebola/Lofa")
-min_date <- as.Date("2014-06-01")
-max_date <- as.Date("2014-10-20")
-
-inc_filename <- "lofa_incidence.rds"
-incidence <- readRDS(paste(code_dir, "data", inc_filename, sep = "/"))
-
-rate_multiplier <- 7
-admissions <- incidence[["admissions"]] %>%
-  filter(classification %in% c("confirmed", "probable")) %>%
-  group_by(date) %>%
-  summarise(admissions = sum(admissions)) %>%
-  ungroup
-
-admission_dates <-
-  data.frame(date = seq.Date(min_date, max_date, by = "week"))
-
-admission_dates <- admission_dates %>%
-  mutate(date = date - wday(date) + 2)
-
-admissions_data <- admission_dates %>%
-  left_join(admissions, by = "date") %>%
-  filter(between(date, min_date, max_date)) %>%
-  mutate(week = as.integer(((date - min(date)) / rate_multiplier + 1))) %>%
-  mutate(admissions = ifelse(is.na(admissions), 0, admissions)) 
-
-data <- admissions_data %>%
-  select(-week) %>%
-  ##      gather(state, value, admissions:deaths) %>%
-  gather(state, value, admissions) %>%
-  mutate(state = stri_trans_totitle(state)) %>%
-  rename(time = date)
+## sample admissions
 
 l$Admissions <- copy(l$Zh)
 l$Admissions[, mean := value]

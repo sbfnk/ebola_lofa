@@ -74,9 +74,18 @@ if (length(seed) == 0) {
     seed <- ceiling(runif(1, -1, .Machine$integer.max - 1))
 }
 
-set.seed(seed)
+if (length(output_file_name) == 0)
+{
+    filebase <- "ebola_lofa"
+    output_file_name <- paste0(filebase, "_", r0_trajectory, ifelse(length(par_nb) == 0, "", paste0("_", par_nb)))
+}
 
-rate_multiplier <- 7 # weekly data
+if (length(grep("/", output_file_name)) == 0)
+{
+    output_file_name <- paste(output_dir, output_file_name, sep = "/")
+}
+
+set.seed(seed)
 
 ## read incidence data
 inc_filename <- "lofa_incidence.rds"
@@ -106,11 +115,13 @@ admissions_data <- admission_dates %>%
   left_join(admissions, by = "date") %>%
   left_join(deaths, by = "date") %>%
   filter(between(date, min_date, max_date)) %>%
-  mutate(week = as.integer(((date - min(date)) / rate_multiplier + 1))) %>%
+  mutate(week = as.integer(((date - min(date)) / 7 + 1))) %>%
   mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>%
   mutate(deaths = ifelse(is.na(deaths), 0, deaths))
 
 obs <- list(Admissions = admissions_data %>% select(week, value = admissions))
+
+saveRDS(obs, paste(output_file_name, "obs.rds", sep = "_"))
 
 if (deaths) obs[["Deaths"]] <- admissions_data %>% select(week, value = deaths)
 
@@ -123,20 +134,11 @@ delay_dates$value <-
          y = admission_delays$median,
          xout = delay_dates$date)$y
 delay_dates <- delay_dates %>% 
-  mutate(week = as.integer(((date - min(date)) / rate_multiplier)))
+  mutate(week = as.integer(((date - min(date)) / 7)))
 
 input <- list(admission_delay = delay_dates %>% select(week, value))
 
-if (length(output_file_name) == 0)
-{
-    filebase <- "ebola_lofa"
-    output_file_name <- paste0(filebase, "_", r0_trajectory, ifelse(length(par_nb) == 0, "", paste0("_", par_nb)))
-}
-
-if (length(grep("/", output_file_name)) == 0)
-{
-    output_file_name <- paste(output_dir, output_file_name, sep = "/")
-}
+saveRDS(input, paste(output_file_name, "input.rds", sep = "_"))
 
 working_dir<- paste(output_file_name, sep = "/")
 unlink(working_dir, recursive = TRUE)
@@ -165,7 +167,7 @@ if (verbose) ## all states
   ebola_model$update_lines(no_output, updated_lines)
 }
 
-ebola_model$fix(rate_multiplier = rate_multiplier)
+ebola_model$fix(rate_multiplier = 7)
 
 init <- list()
 if (length(late_increase) > 0)
@@ -426,6 +428,8 @@ if (length(par_nb) == 0)
       gather(state, value, admissions) %>%
       mutate(state = stri_trans_totitle(state)) %>%
       rename(time = date)
+
+    saveRDS(data, paste(output_file_name, "data.rds", sep = "_"))
 
     plot_args[["read"]] <- res
     plot_args[["data"]] <- data
