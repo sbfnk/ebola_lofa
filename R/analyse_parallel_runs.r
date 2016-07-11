@@ -25,17 +25,18 @@ for (i in seq_len(n_traj))
     if (is.null(data)) data <- readRDS(paste0(filename, "_data.rds"))
 }
 
-z_np_translate <- NULL
-l <- lapply(names(res[[1]]), function(x) {
+## combined into one chain
+np_translate <- NULL
+combined <- lapply(names(res[[1]]), function(x) {
   z <- rbindlist(lapply(seq_along(res), function(y) {
     data.table(res[[y]][[x]])[, unique_np := paste(np, y, sep = "_")]
   }))
-  if (is.null(z_np_translate)) {
-    z_np_translate <-
+  if (is.null(np_translate)) {
+    np_translate <-
       data.table(unique_np = unique(z$unique_np),
                  new_np = seq_along(unique(z$unique_np)) - 1)
   }
-  z <- merge(z, z_np_translate, by = "unique_np")
+  z <- merge(z, np_translate, by = "unique_np")
   z[, np := NULL]
   z[, unique_np := NULL]
   setnames(z, "new_np", "np")
@@ -43,8 +44,8 @@ l <- lapply(names(res[[1]]), function(x) {
   z
 })
 
-names(l) <- names(res[[1]])
-saveRDS(l, "lofa_parallel_traces.rds")
+names(combined) <- names(res[[1]])
+saveRDS(combined, "lofa_combined_traces.rds")
 
 ## est_params <- l[c("p_Inf", "p_R0", "p_vol_R0", "p_early_H", "p_late_H", "p_H_alpha", "p_H_tau")]
 ## est_params <- lapply(names(est_params), function(x) {est_params[[x]][, state := x]})
@@ -56,53 +57,47 @@ saveRDS(l, "lofa_parallel_traces.rds")
 
 ## sample admissions
 
-l$Admissions <- copy(l$Zh)
-l$Admissions[, mean := value]
-l$Admissions[, sd := sqrt(value)]
-l$Admissions[, value := rtruncnorm(n = .N, a = 0, mean = mean, sd = sd)]
-l$Admissions[is.na(value), value := 0]
+combined$Admissions <- copy(combined$Zh)
+combined$Admissions[, mean := value]
+combined$Admissions[, sd := sqrt(value)]
+combined$Admissions[, value := rtruncnorm(n = .N, a = 0, mean = mean, sd = sd)]
+combined$Admissions[is.na(value), value := 0]
 
-p <- plot_libbi(l, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram")
+p <- plot_libbi(l, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE)
 
 p_obs <- plot_libbi(l, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", states = "Admissions", params = NULL, noises = NULL)
 #p <- plot_libbi(l, model, density_args = list(adjust = 2))
 save_plot("lofa_fit.pdf", p_obs$states + scale_y_continuous("Weekly new admissions"))
 
-l$p_Inf[, list(mean = mean(value),
+combined$p_Inf[, list(mean = mean(value),
                min.50 = quantile(value, 0.25),
                max.50 = quantile(value, 0.75),
                min.95 = quantile(value, 0.025),
                min.95 = quantile(value, 0.975))]
 
-l$p_R0[, list(mean = mean(value),
+combined$p_R0[, list(mean = mean(value),
                min.50 = quantile(value, 0.25),
                max.50 = quantile(value, 0.75),
                min.95 = quantile(value, 0.025),
                min.95 = quantile(value, 0.975))]
 
-l$p_early_H[, list(mean = mean(value),
+combined$p_early_H[, list(mean = mean(value),
                    min.50 = quantile(value, 0.25),
                    max.50 = quantile(value, 0.75),
                    min.95 = quantile(value, 0.025),
                    min.95 = quantile(value, 0.975))]
 
-l$p_late_H[, list(mean = mean(value),
+combined$p_late_H[, list(mean = mean(value),
                   min.50 = quantile(value, 0.25),
                   max.50 = quantile(value, 0.75),
                   min.95 = quantile(value, 0.025),
                   min.95 = quantile(value, 0.975))]
 
-l$p_vol_R0[, list(mean = mean(value),
+combined$p_vol_R0[, list(mean = mean(value),
                   min.50 = quantile(value, 0.25),
                   max.50 = quantile(value, 0.75),
                   min.95 = quantile(value, 0.025),
                   min.95 = quantile(value, 0.975))]
-
-late_R0[, list(mean = mean(value),
-               min.50 = quantile(value, 0.25),
-               max.50 = quantile(value, 0.75),
-               min.95 = quantile(value, 0.025),
-               max.95 = quantile(value, 0.79))]
 
 beta_params <- c("p_R0", "p_gamma", "p_alpha", "p_cfr", "H")
 
@@ -126,7 +121,7 @@ for (i in names(l)){
   setnames(l[[i]], i, "value")
 }
 
-elH <- l$H[, list(early = value[1], late = value[length(value)]), by = np]
+elH <- combined$H[, list(early = value[1], late = value[length(value)]), by = np]
 elH[, ratio := late / early]
 elH[, list(median = median(ratio),
            min.50 = quantile(ratio, 0.25),
