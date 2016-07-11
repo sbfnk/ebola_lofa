@@ -13,7 +13,7 @@ unlink(working_folder, recursive = TRUE)
 dir.create(working_folder)
 
 ## get posterior file
-posterior <- readRDS("lofa_parallel_traces.rds")
+posterior <- readRDS("lofa_combined_traces.rds")
 
 ## get original input file
 min_date <- as.Date("2014-06-01")
@@ -93,19 +93,27 @@ posterior[["n_admission"]] <- NULL
 scenarios <- list()
 
 ############################################################################
-## scenario 1: 10 beds in the hospital
+## scenario 1: 40 beds in the hospital
 ############################################################################
 
 scenario <- 1
 
 scenarios[[scenario]] <- copy(input)
-scenarios[[scenario]][["K"]][, value := value[1]]
+scenarios[[scenario]][["K"]][, value := 40]
 
 ############################################################################
-## scenario 2: healthcare seeking behaviour as in week 1
+## scenario 2: no troughs in R0
 ############################################################################
 
 scenario <- 2
+scenarios[[scenario]] <- copy(input)
+scenarios[[scenario]][["R0"]][value < 1,  value := 1]
+
+############################################################################
+## scenario 3: healthcare seeking behaviour as in week 1
+############################################################################
+
+scenario <- 3
 
 scenarios[[scenario]] <- copy(input)
 H_week_1 <- scenarios[[scenario]][["H"]][time == 0, list(np = np, new_value = value)]
@@ -116,67 +124,18 @@ scenarios[[scenario]][["H"]][time > 0, value := new_value]
 scenarios[[scenario]][["H"]][, new_value := NULL]
 
 ############################################################################
-## scenario 3: behaviour as in week 1                                     ##
-############################################################################
-
-scenario <- 3
-
-scenarios[[scenario]] <- copy(input)
-R0_week_1 <- scenarios[[scenario]][["R0"]][time == 1, list(np = np, new_value = value)]
-scenarios[[scenario]][["R0"]] <- merge(scenarios[[scenario]][["R0"]], R0_week_1, by = "np", all.x = TRUE)
-scenarios[[scenario]][["R0"]] <- scenarios[[scenario]][["R0"]][, list(time, np, value, new_value)]
-setkey(scenarios[[scenario]][["R0"]], time, np)
-scenarios[[scenario]][["R0"]][time > 1, value := new_value]
-scenarios[[scenario]][["R0"]][, new_value := NULL]
-H_week_1 <- scenarios[[scenario]][["H"]][time == 1, list(np = np, new_value = value)]
-scenarios[[scenario]][["H"]] <- merge(scenarios[[scenario]][["H"]], H_week_1, by = "np", all.x = TRUE)
-scenarios[[scenario]][["H"]] <- scenarios[[scenario]][["H"]][, list(time, np, value, new_value)]
-setkey(scenarios[[scenario]][["H"]], time, np)
-scenarios[[scenario]][["H"]][time > 1, value := new_value]
-scenarios[[scenario]][["H"]][, new_value := NULL]
-
-############################################################################
-## scenario 4: behaviour as in week 9                                    ##
+## scenario 4: exactly the same                                           ##
 ############################################################################
 
 scenario <- 4
 
 scenarios[[scenario]] <- copy(input)
-R0_week_9 <- scenarios[[scenario]][["R0"]][time == 9, list(np = np, new_value = value)]
-scenarios[[scenario]][["R0"]] <- merge(scenarios[[scenario]][["R0"]], R0_week_9, by = "np", all.x = TRUE)
-scenarios[[scenario]][["R0"]] <- scenarios[[scenario]][["R0"]][, list(time, np, value, new_value)]
-setkey(scenarios[[scenario]][["R0"]], time, np)
-scenarios[[scenario]][["R0"]][time > 9, value := new_value]
-scenarios[[scenario]][["R0"]][, new_value := NULL]
-H_week_9 <- scenarios[[scenario]][["H"]][time == 9, list(np = np, new_value = value)]
-scenarios[[scenario]][["H"]] <- merge(scenarios[[scenario]][["H"]], H_week_9, by = "np", all.x = TRUE)
-scenarios[[scenario]][["H"]] <- scenarios[[scenario]][["H"]][, list(time, np, value, new_value)]
-setkey(scenarios[[scenario]][["H"]], time, np)
-scenarios[[scenario]][["H"]][time > 9, value := new_value]
-scenarios[[scenario]][["H"]][, new_value := NULL]
 
 ############################################################################
-## scenario 5: bed expansion 2 weeks later
+## scenario 5: enough beds for everyone
 ############################################################################
 
 scenario <- 5
-
-scenarios[[scenario]] <- copy(input)
-scenarios[[scenario]][["K"]][, value := c(value[1:2], value[seq_len(length(value) - 2)])]
-
-############################################################################
-## scenario 6: exactly the same                                           ##
-############################################################################
-
-scenario <- 6
-
-scenarios[[scenario]] <- copy(input)
-
-############################################################################
-## scenario 7: enough beds for everyone
-############################################################################
-
-scenario <- 7
 
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := 1e+7]
