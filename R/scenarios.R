@@ -35,7 +35,7 @@ input <- c(list(R0 = posterior$R0,
                 H = posterior$H,
                 K = bed_availability[, list(time, value = available.ebola)],
                 late_increase = 1,
-                admission_delay = input$admission_delay,
+                admission_delay = data.table(combined$input$admission_delay)[, list(time = week, value)],
                 n_admission = posterior$n_admission))
 
 ## get model
@@ -58,27 +58,36 @@ posterior[["n_admission"]] <- NULL
 scenarios <- list()
 
 ############################################################################
-## scenario 1: 40 beds in the hospital
+## scenario 1: 10 beds in the hospital
 ############################################################################
 
 scenario <- 1
 
 scenarios[[scenario]] <- copy(input)
-scenarios[[scenario]][["K"]][, value := 40]
+scenarios[[scenario]][["K"]][, value := 10]
 
 ############################################################################
-## scenario 2: no troughs in R0
+## scenario 2: 40 beds in the hospital
 ############################################################################
 
 scenario <- 2
+
+scenarios[[scenario]] <- copy(input)
+scenarios[[scenario]][["K"]][, value := 40]
+
+############################################################################
+## scenario 3: no troughs in R0
+############################################################################
+
+scenario <- 3
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["R0"]][value < 1,  value := 1]
 
 ############################################################################
-## scenario 3: healthcare seeking behaviour as in week 1
+## scenario 4: healthcare seeking behaviour as in week 1
 ############################################################################
 
-scenario <- 3
+scenario <- 4
 
 scenarios[[scenario]] <- copy(input)
 H_week_1 <- scenarios[[scenario]][["H"]][time == 0, list(np = np, new_value = value)]
@@ -89,18 +98,18 @@ scenarios[[scenario]][["H"]][time > 0, value := new_value]
 scenarios[[scenario]][["H"]][, new_value := NULL]
 
 ############################################################################
-## scenario 4: exactly the same                                           ##
+## scenario 5: exactly the same                                           ##
 ############################################################################
 
-scenario <- 4
+scenario <- 5
 
 scenarios[[scenario]] <- copy(input)
 
 ############################################################################
-## scenario 5: enough beds for everyone
+## scenario 6: enough beds for everyone
 ############################################################################
 
-scenario <- 5
+scenario <- 6
 
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := 1e+7]
@@ -175,11 +184,4 @@ cases <- all_scenarios[state == "Zc",
                             max.2 = quantile(value, 0.975)),
                        by = list(scenario, time)]
 
-r0 <- all_scenarios[state == "R0",
-                    list(mean = mean(value),
-                         median = median(value),
-                         min.1 = quantile(value, 0.25),
-                         max.1 = quantile(value, 0.75),
-                         min.2 = quantile(value, 0.025),
-                         max.2 = quantile(value, 0.975)),
-                    by = list(scenario, time)]
+cases[, mean[21], by = scenario]
