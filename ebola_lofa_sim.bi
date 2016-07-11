@@ -45,7 +45,6 @@ model ebola_lofa_sim {
 
   state kappa
   state beta
-  state hospital_open
 
   obs Admissions
 
@@ -62,7 +61,6 @@ model ebola_lofa_sim {
 
     kappa <- 1 / admission_delay * rate_multiplier
     beta <- R0 * p_gamma * p_alpha / (p_alpha + p_cfr * p_gamma)
-    hospital_open <- Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
 
     ode {
 
