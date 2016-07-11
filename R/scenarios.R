@@ -31,11 +31,11 @@ bed_availability <- bed_availability[date >= min(combined$data$time) &
 bed_availability[, time := seq_len(nrow(bed_availability)) - 1]
 
 ## combine original input file with R0 trajectories from the posterior
-input <- c(combined$input,
-           list(R0 = posterior$R0,
+input <- c(list(R0 = posterior$R0,
                 H = posterior$H,
                 K = bed_availability[, list(time, value = available.ebola)],
                 late_increase = 1,
+                admission_delay = input$admission_delay,
                 n_admission = posterior$n_admission))
 
 ## get model
@@ -112,7 +112,6 @@ scenarios[[scenario]][["K"]][, value := 1e+7]
 sim_scenarios <- list()
 for (scenario in seq_along(scenarios))
 {
-
     cat("Scenario ", scenario, "\n")
     global_options <-
         list("end-time" = 21,
@@ -146,7 +145,8 @@ for (i in seq_along(sim_scenarios)) {
 all_scenarios <- rbindlist(state_scenarios)
 
 saveRDS(all_scenarios, "lofa_scenarios.rds")
-## all_scenarios <- readRDS
+saveRDS(sim_scenarios, "lofa_sim_scenarios.rds")
+## all_scenarios <- readRDS(paste(output_folder, "lofa_scenarios.rds", sep = "/"))
 
 admissions_no_change <- all_scenarios[scenario %in% c(4,5) & state == "Admissions",
                                       list(mean = mean(value),
