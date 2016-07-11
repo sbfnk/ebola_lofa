@@ -69,7 +69,8 @@ model ebola_lofa_fit {
     next_obs <- (t_next_obs > next_obs ? t_next_obs : next_obs)
 
     inline kappa = 1 / admission_delay * rate_multiplier
-    inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
+    inline beta = R0 * p_gamma * p_alpha / (p_alpha + p_cfr * p_gamma)
+
     ode {
 
       dS/dt =

@@ -61,7 +61,7 @@ model ebola_lofa_sim {
     // inline hospital_open = Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
 
     kappa <- 1 / admission_delay * rate_multiplier
-    beta <- R0 * p_gamma * p_alpha / (p_alpha + p_cfr * (1 - H) * p_gamma)
+    beta <- R0 * p_gamma * p_alpha / (p_alpha + p_cfr * p_gamma)
     hospital_open <- Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0
 
     ode {
@@ -84,15 +84,15 @@ model ebola_lofa_sim {
       + (gamma_erlang > 0 ? e_gamma * p_gamma * Ih[gamma_erlang - 1,kappa_erlang] : 0) // proceeding through gamma stages
       - e_gamma * p_gamma * Ih[gamma_erlang,kappa_erlang] // proceeding through gamma stages
       + (kappa_erlang > 0 ? e_kappa * kappa * Ih[gamma_erlang, kappa_erlang - 1] : 0) // proceeding through kappa stages
-      - (kappa_erlang < (e_kappa - 1) ? (e_kappa * kappa * Ih[gamma_erlang,kappa_erlang]) : e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] * n_admission * hospital_open) // proceeding through kappa stages 
+      - (kappa_erlang < (e_kappa - 1) ? (e_kappa * kappa * Ih[gamma_erlang,kappa_erlang]) : e_kappa * kappa * Ih[gamma_erlang,kappa_erlang] * n_admission * (Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0)) // proceeding through kappa stages 
 
       dHr[theta_erlang]/dt =
-      + (theta_erlang == 0 ? ((1 - p_cfr) * e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * hospital_open) : 0)
+      + (theta_erlang == 0 ? ((1 - p_cfr) * e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * (Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0)) : 0)
       + (theta_erlang > 0 ? e_theta * p_theta * Hr[theta_erlang - 1] : 0)
       - e_theta * p_theta * Hr[theta_erlang]
 
       dHd[delta_erlang]/dt =
-      + (delta_erlang == 0 ? p_cfr * e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * hospital_open : 0)
+      + (delta_erlang == 0 ? p_cfr * e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * (Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0) : 0)
       + (delta_erlang > 0 ? e_delta * p_delta * Hd[delta_erlang - 1] : 0)
       - e_delta * p_delta * Hd[delta_erlang]
 
@@ -104,7 +104,7 @@ model ebola_lofa_sim {
       + e_rho * p_rho * E[e_rho - 1]
 
       dZh/dt =
-      + e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * hospital_open
+      + e_kappa * kappa * (Ih[0,e_kappa - 1] + Ih[1,e_kappa - 1] + Ih[2,e_kappa - 1]) * n_admission * (Hr[0] + Hr[1] + Hr[2] + Hr[3] + Hr[4] + Hr[5] + Hr[6] + Hr[7] + Hr[8] + Hr[9] + Hd[0] + Hd[1] < K ? 1 : 0)
     }
 
   }
