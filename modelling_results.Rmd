@@ -115,7 +115,7 @@ Save
 
 ```{r save}
 names(combined) <- names(res[[1]])
-saveRDS(combined, paste0(output_dir, "/lofa_combined_traces.rds"))
+saveRDS(list(traces = combined, input = input, obs = obs, data = data), paste0(output_dir, "/lofa_combined_traces.rds"))
 ``` 
 
 Sample observations
