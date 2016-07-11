@@ -1,5 +1,10 @@
 ---
-title: "Reproducing the modelling results in 'Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia'"
+title: 'Modelling results'
+author: 'Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia'
+date: 'Sebastian Funk, Iza Ciglenecki, Amanda Tiffany, Etienne Gignoux, Anton Camacho, Rosalind M. Eggo, Adam J. Kucharski, W. John Edmunds, Josephus Bolongei, Phillip Azuma, Peter Clement, Alpha Tamba, Esther Sterk, Barbara Telfer, Gregory Engel, Lucy Anne Parker, Motoi Suzuki, Nico Heijenberg, Bruce Reeder'
+output:
+  html_document:
+    self_contained: true
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE}
@@ -11,10 +16,12 @@ knitr::opts_chunk$set(cache = TRUE, fig.cap = '', fig.align = "center", message 
 This document contains the R code necessary to reproduce the results in "Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia." All code and data used here are in a [github repository](http://github.com/sbfnk/ebola_lofa).
 
 ## Required packages
-```{r install, cache = FALSE, eval = FALSE}
+```{r packages}
 cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm")
 github_packages <- c("libbi/RBi", "sbfnk/RBi.helpers")
+```
 
+```{r install, eval = FALSE}
 for (package in cran_packages)
 {
     install.packages(package)
@@ -30,6 +37,8 @@ for (package in github_packages)
 
 # Generate MCMC chains
 
+Generating MCMC chains requires a working install of [libbi](http://libbi.org/) v1.2.0.
+
 Edit the lines starting `code_dir <- ` and `output_dir <-` in the script 'sample_posterior.r' from the R/ directory in the github repository to point to the correct directories, and run it using
 
 ```{sh eval = FALSE}
@@ -42,13 +51,161 @@ where you should set `$NUM_THREADS` to the number of concurrent threads to run (
 
 Set the `output_dir` to the value used in `sample.posterior.r`
 
-```
+```{r eval = FALSE}
 output_dir <- 'insert your directory here'
+```
+
+```{r echo = FALSE}
+output_dir <- "~/Data/Ebola/Lofa/"
+```
+
+Load required packages
+```{r load}
+for (package in github_packages)
+{
+    library(sub("^.*/", "", package), character.only = TRUE)
+}
 ```
 
 Get MCMC chains
 
+```{r get_chains}
+mcmc_files <- list.files(output_dir, pattern = "ebola_lofa_independent_[0-9]+\\.rds", full.names = TRUE)
+
+res <- list()
+
+model <- NULL
+obs <- NULL
+input <- NULL
+data <- NULL
+
+for (file in mcmc_files)
+{
+    res[[file]] <- readRDS(paste0(file))
+    if (is.null(model)) model <- bi_model(sub("\\.rds$", ".bi", file))
+    if (is.null(obs)) obs <- readRDS(sub("\\.rds$", "_obs.rds", file))
+    if (is.null(input)) input <- readRDS(sub("\\.rds$", "_input.rds", file))
+    if (is.null(data)) data <- readRDS(sub("\\.rds$", "_data.rds", file))
+}
 ```
+
+Combine into one chain
+
+```{r combine}
+np_translate <- NULL
+combined <- lapply(names(res[[1]]), function(x) {
+  z <- rbindlist(lapply(seq_along(res), function(y) {
+    data.table(res[[y]][[x]])[, unique_np := paste(np, y, sep = "_")]
+  }))
+  if (is.null(np_translate)) {
+    np_translate <-
+      data.table(unique_np = unique(z$unique_np),
+                 new_np = seq_along(unique(z$unique_np)) - 1)
+  }
+  z <- merge(z, np_translate, by = "unique_np")
+  z[, np := NULL]
+  z[, unique_np := NULL]
+  setnames(z, "new_np", "np")
+  setkey(z, np)
+  z
+})
+```
+
+Save
+
+```{r save}
+names(combined) <- names(res[[1]])
+saveRDS(combined, paste0(output_dir, "/lofa_combined_traces.rds"))
+``` 
+
+Sample observations
+
+```{r sample}
+combined$Admissions <- copy(combined$Zh)
+combined$Admissions[, mean := value]
+combined$Admissions[, sd := sqrt(value)]
+combined$Admissions[, value := rtruncnorm(n = .N, a = 0, mean = mean, sd = sd)]
+combined$Admissions[is.na(value), value := 0]
+```
+
+# Plot
+
+```{r plot}
+p <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE)
+```
+
+## State estimates
+```{r states}
+p$states
+```
+
+## Traces
+```{r traces}
+p$trace
+```
+
+## Densities
+```{r densities}
+p$densities
+```
+
+# Analyse
+
+## Initial number of infected
+```{r Inf}
+combined$p_Inf[, list(mean = mean(value),
+               min.50 = quantile(value, 0.25),
+               max.50 = quantile(value, 0.75),
+               min.95 = quantile(value, 0.025),
+               min.95 = quantile(value, 0.975))]
+```
+
+## Mean reproduction number
+```{r mean_R0}
+combined$p_R0[, list(mean = mean(value),
+               min.50 = quantile(value, 0.25),
+               max.50 = quantile(value, 0.75),
+               min.95 = quantile(value, 0.025),
+               min.95 = quantile(value, 0.975))]
 
 ```
 
+## Standard deviation of reproduction number
+```{r sd_R0}
+combined$p_vol_R0[, list(mean = mean(value),
+                  min.50 = quantile(value, 0.25),
+                  max.50 = quantile(value, 0.75),
+                  min.95 = quantile(value, 0.025),
+                  min.95 = quantile(value, 0.975))]
+```
+
+## Early proportion seeking healthcare
+```{r early_H}
+elH <- combined$H[, list(early = value[1], late = value[length(value)]), by = np]
+elH[, list(median = median(early),
+           min.50 = quantile(early, 0.25),
+           max.50 = quantile(early, 0.75),
+           min.95 = quantile(early, 0.025),
+           max.95 = quantile(early, 0.975))]
+```
+
+## Late proportion seeking healthcare
+```{r late_H}
+elH[, list(median = median(late),
+           min.50 = quantile(late, 0.25),
+           max.50 = quantile(late, 0.75),
+           min.95 = quantile(late, 0.025),
+           max.95 = quantile(late, 0.975))]
+```
+
+## Ratio between proportion seeking healthcare at last and first data point
+
+```{r ratio_H}
+elH <- combined$H[, list(early = value[1], late = value[length(value)]), by = np]
+elH[, ratio := late / early]
+elH[, list(median = median(ratio),
+           min.50 = quantile(ratio, 0.25),
+           max.50 = quantile(ratio, 0.75),
+           min.95 = quantile(ratio, 0.025),
+           max.95 = quantile(ratio, 0.975))]
+```
