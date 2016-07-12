@@ -21,3 +21,8 @@ vignettes/*.pdf
 data/
 
 .DS_Store
+
+*.pdf
+*.html
+*_cache
+*_files
