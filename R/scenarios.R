@@ -61,7 +61,7 @@ scenarios <- list()
 ## scenario 1: 10 beds in the hospital
 ############################################################################
 
-scenario <- 1
+scenario <- "10 beds"
 
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := 10]
@@ -70,7 +70,7 @@ scenarios[[scenario]][["K"]][, value := 10]
 ## scenario 2: 40 beds in the hospital
 ############################################################################
 
-scenario <- 2
+scenario <- "40 beds"
 
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := 40]
@@ -79,7 +79,7 @@ scenarios[[scenario]][["K"]][, value := 40]
 ## scenario 3: no troughs in R0
 ############################################################################
 
-scenario <- 3
+scenario <- "R0 always > 1"
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["R0"]][value < 1,  value := 1]
 
@@ -87,7 +87,7 @@ scenarios[[scenario]][["R0"]][value < 1,  value := 1]
 ## scenario 4: healthcare seeking behaviour as in week 1
 ############################################################################
 
-scenario <- 4
+scenario <- "No improvement in\nhealthcare seeking"
 
 scenarios[[scenario]] <- copy(input)
 H_week_1 <- scenarios[[scenario]][["H"]][time == 0, list(np = np, new_value = value)]
@@ -101,7 +101,7 @@ scenarios[[scenario]][["H"]][, new_value := NULL]
 ## scenario 5: exactly the same                                           ##
 ############################################################################
 
-scenario <- 5
+scenario <- "given beds"
 
 scenarios[[scenario]] <- copy(input)
 
@@ -109,7 +109,7 @@ scenarios[[scenario]] <- copy(input)
 ## scenario 6: enough beds for everyone
 ############################################################################
 
-scenario <- 6
+scenario <- "as observed"
 
 scenarios[[scenario]] <- copy(input)
 scenarios[[scenario]][["K"]][, value := 1e+7]
@@ -138,6 +138,7 @@ for (scenario in seq_along(scenarios))
     sim_scenarios[[scenario]] <- bi_read(run_joint)
 }
 
+## sum over Erlang compartments
 state_scenarios <- list()
 for (i in seq_along(sim_scenarios)) {
     for (j in names(sim_scenarios[[i]])) {
@@ -151,37 +152,87 @@ for (i in seq_along(sim_scenarios)) {
     }
 }
 
+## merge tables
 all_scenarios <- rbindlist(state_scenarios)
 
-saveRDS(all_scenarios, "lofa_scenarios.rds")
-saveRDS(sim_scenarios, "lofa_sim_scenarios.rds")
-## all_scenarios <- readRDS(paste(output_folder, "lofa_scenarios.rds", sep = "/"))
+saveRDS(all_scenarios, paste(output_folder, "lofa_scenarios.rds", sep = "/"))
 
-admissions_no_change <- all_scenarios[scenario %in% c(4,5) & state == "Admissions",
-                                      list(mean = mean(value),
-                                           median = median(value),
-                                           min.1 = quantile(value, 0.25),
-                                           max.1 = quantile(value, 0.75),
-                                           min.2 = quantile(value, 0.025),
-                                           max.2 = quantile(value, 0.975)),
-                                      by = list(scenario, time)]
+incidences <- all_scenarios[state %in% c("Zc", "Zh", "Admissions"),
+                            list(value = diff(value),
+                                   time = time[-1]),
+                            by = list(scenario, np, state)]
+incidences[, date := as.Date("2014-06-02") + 7 * (time - 1)]
 
-admissions <- all_scenarios[state == "Zh",
+## for checking that admissions number look reasonable when running with actual bed numbers, or enough beds for everybody
+admissions_no_change <-
+  incidences[scenario %in% c(5,6) & state == "Admissions",
+             list(mean = mean(value),
+                  median = median(value),
+                  min.1 = quantile(value, 0.25),
+                  max.1 = quantile(value, 0.75),
+                  min.2 = quantile(value, 0.025),
+                  max.2 = quantile(value, 0.975)),
+             by = list(scenario, date)]
+
+## ETC admissions
+admissions <- incidences[state == "Zh",
                             list(mean = mean(value),
                                  median = median(value),
                                  min.1 = quantile(value, 0.25),
                                  max.1 = quantile(value, 0.75),
                                  min.2 = quantile(value, 0.025),
                                  max.2 = quantile(value, 0.975)),
-                            by = list(scenario, time)]
+                            by = list(scenario, date)]
 
-cases <- all_scenarios[state == "Zc",
+cases <- incidences[state == "Zc",
                        list(mean = mean(value),
                             median = median(value),
                             min.1 = quantile(value, 0.25),
                             max.1 = quantile(value, 0.75),
                             min.2 = quantile(value, 0.025),
                             max.2 = quantile(value, 0.975)),
-                       by = list(scenario, time)]
+                       by = list(scenario, date)]
 
-cases[, mean[21], by = scenario]
+final_sizes <- incidences[state == "Zc", list(value = sum(value)),
+                          by = list(scenario, np)]
+dfs <- dcast(final_sizes, np ~ scenario)
+
+quantile(dfs[, `10 beds` / `as observed`], c(0.025, 0.25, 0.5, 0.75, 0.975))
+quantile(dfs[, `40 beds` / `as observed`], c(0.025, 0.25, 0.5, 0.75, 0.975))
+quantile(dfs[, `R0 always > 1` / `as observed`],
+         c(0.025, 0.25, 0.5, 0.75, 0.975))
+quantile(dfs[, `No improvement in\nhealthcare seeking` / `as observed`],
+         c(0.025, 0.25, 0.5, 0.75, 0.975))
+
+first_scenarios <- c("10 beds", "40 beds", "as observed")
+second_scenarios <- c("R0 always > 1", "No improvement in\nhealthcare seeking", "as observed")
+
+scenarios_1 <- cases[scenario %in% first_scenarios]
+scenarios_1[, scenario := factor(scenario, first_scenarios)]
+scenarios_2 <- cases[scenario %in% second_scenarios]
+scenarios_2[, scenario := factor(scenario, second_scenarios)]
+
+p1 <- ggplot(scenarios_1,
+             aes(x = date, y = median, color = scenario, fill = scenario)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = min.1, ymax = max.1), alpha = 0.5) +
+  scale_color_brewer("", palette = "Set1") +
+  scale_fill_brewer("", palette = "Set1") +
+  scale_y_continuous("Incidence") +
+  scale_x_date("") +
+  theme(legend.position = "top")
+
+p2 <- ggplot(scenarios_2,
+            aes(x = date, y = median, color = scenario, fill = scenario)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = min.1, ymax = max.1), alpha = 0.5) +
+  scale_color_brewer("", palette = "Set1") +
+  scale_fill_brewer("", palette = "Set1") +
+  scale_y_continuous("Incidence") +
+  scale_x_date("") +
+  theme(legend.position = "top") + 
+  guides(fill=guide_legend(nrow=2,byrow=TRUE))
+
+pg <- plot_grid(p1, p2, labels = c("A", "B"), align = "h")
+
+save_plot("scenarios.pdf", pg, nrow = 1, ncol = 2, base_aspect_ratio = 1.3)
