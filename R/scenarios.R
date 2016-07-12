@@ -156,6 +156,7 @@ for (i in seq_along(sim_scenarios)) {
 all_scenarios <- rbindlist(state_scenarios)
 
 saveRDS(all_scenarios, paste(output_folder, "lofa_scenarios.rds", sep = "/"))
+all_scenarios <- readRDS(paste(output_folder, "lofa_scenarios.rds", sep = "/"))
 
 incidences <- all_scenarios[state %in% c("Zc", "Zh", "Admissions"),
                             list(value = diff(value),
@@ -231,8 +232,9 @@ p2 <- ggplot(scenarios_2,
   scale_y_continuous("Incidence") +
   scale_x_date("") +
   theme(legend.position = "top") + 
+  coord_cartesian(ylim = c(0, 2000)) +
   guides(fill=guide_legend(nrow=2,byrow=TRUE))
 
-pg <- plot_grid(p1, p2, labels = c("A", "B"), align = "h")
+pg <- plot_grid(p1, p2, labels = c("a", "b"), align = "h")
 
 save_plot("scenarios.pdf", pg, nrow = 1, ncol = 2, base_aspect_ratio = 1.3)
