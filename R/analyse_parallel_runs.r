@@ -65,10 +65,6 @@ combined$Admissions[is.na(value), value := 0]
 
 p <- plot_libbi(l, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE)
 
-p_obs <- plot_libbi(l, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", states = "Admissions", params = NULL, noises = NULL)
-#p <- plot_libbi(l, model, density_args = list(adjust = 2))
-save_plot("lofa_fit.pdf", p_obs$states + scale_y_continuous("Weekly new admissions"))
-
 combined$p_Inf[, list(mean = mean(value),
                min.50 = quantile(value, 0.25),
                max.50 = quantile(value, 0.75),
