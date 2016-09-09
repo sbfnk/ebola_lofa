@@ -41,7 +41,8 @@ Generating MCMC chains requires a working install of [libbi](http://libbi.org/) 
 Edit the lines starting `code_dir <- ` and `output_dir <-` in the script 'sample_posterior.r' from the R/ directory in the github repository to point to the correct directories, and run it using
 
 ```{sh eval = FALSE}
-Rscript sample_posterior.r -n 10000 -p 1000 -r bounded -t $NUM_THREADS -i 10 -q -l -f -o ebola_lofa_$NB -c 16384 -b $NB
+Rscript sample_posterior.r -n 10000 -p 1000 -r independent -t $NUM_THREADS -i 10 -q -l -f \
+                           -o ebola_lofa_$NB -c 16384 -b $NB
 ```
 
 where you should set `$NUM_THREADS` to the number of concurrent threads to run (i.e., the number of CPU cores available) and `$NB` to a running number (1,2,3,...) for each chain to generate (100 in the manuscript).
