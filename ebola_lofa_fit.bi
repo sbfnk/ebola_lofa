@@ -113,11 +113,11 @@ model ebola_lofa_fit {
     p_N <- 270114
     p_rho <- 1 / (e_rho * 4.7) * rate_multiplier
     p_alpha <- 1 * rate_multiplier
-    p_cfr <- 0.6695464
+    p_cfr <- 0.6125682
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
-    p_Inf ~ uniform(0, 100)
+    p_Inf ~ uniform(0, 200)
     p_R0 ~ uniform(0, 10)
-    p_vol_R0 ~ uniform(0, 5)
+    p_vol_R0 ~ uniform(0, 10)
     p_early_H ~ uniform(0, 1)
     p_late_H ~ uniform(0, 1)
     p_H_tau ~ uniform(0, 21)

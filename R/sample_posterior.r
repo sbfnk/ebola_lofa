@@ -105,7 +105,7 @@ admissions <- incidence[["admissions"]] %>%
   summarise(admissions = sum(admissions)) %>%
   ungroup
 
-deaths <- incidence[["deaths"]] %>%
+incident_deaths <- incidence[["deaths"]] %>%
   filter(classification %in% c("confirmed", "probable")) %>%
   group_by(date) %>%
   summarise(deaths = sum(deaths)) %>%
@@ -113,7 +113,7 @@ deaths <- incidence[["deaths"]] %>%
 
 admissions_data <- admission_dates %>%
   left_join(admissions, by = "date") %>%
-  left_join(deaths, by = "date") %>%
+  left_join(incident_deaths, by = "date") %>%
   filter(between(date, min_date, max_date)) %>%
   mutate(week = as.integer(((date - min(date)) / 7 + 1))) %>%
   mutate(admissions = ifelse(is.na(admissions), 0, admissions)) %>%
