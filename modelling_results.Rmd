@@ -1,6 +1,6 @@
 ---
-title: 'Modelling results'
-author: 'Epidemiology, events and control strategies towards eliminating Ebola from Lofa County, Liberia'
+title: 'Electronic supplementary material: Modelling results'
+author: 'The impact of control strategies and behavioural changes on the elimination of Ebola from Lofa County, Liberia'
 date: 'Sebastian Funk, Iza Ciglenecki, Amanda Tiffany, Etienne Gignoux, Anton Camacho, Rosalind M. Eggo, Adam J. Kucharski, W. John Edmunds, Josephus Bolongei, Phillip Azuma, Peter Clement, Alpha Tamba, Esther Sterk, Barbara Telfer, Gregory Engel, Lucy Anne Parker, Motoi Suzuki, Nico Heijenberg, Bruce Reeder'
 output:
   pdf_document
@@ -60,6 +60,10 @@ output_dir <- "~/Data/Ebola/Lofa/"
 
 Load required packages
 ```{r load}
+for (package in cran_packages)
+{
+    library(sub("^.*/", "", package), character.only = TRUE)
+}
 for (package in github_packages)
 {
     library(sub("^.*/", "", package), character.only = TRUE)
