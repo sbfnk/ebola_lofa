@@ -1,5 +1,6 @@
 library('RBi')
 library('data.table')
+library('cowplot')
 
 code_dir <- "~/code/ebola_lofa"
 output_folder <- path.expand("~/Data/Ebola/Lofa")
@@ -147,7 +148,7 @@ for (i in seq_along(sim_scenarios)) {
             sim_scenarios[[i]][[j]] <- sim_scenarios[[i]][[j]][, list(value = sum(value)), by = list(time, np)]
             state_scenarios <- c(state_scenarios, list(sim_scenarios[[i]][[j]]))
         }
-        sim_scenarios[[i]][[j]][, scenario := i]
+        sim_scenarios[[i]][[j]][, scenario := names(scenarios)[[i]]]
         sim_scenarios[[i]][[j]][, state := j]
     }
 }
@@ -166,7 +167,7 @@ incidences[, date := as.Date("2014-06-02") + 7 * (time - 1)]
 
 ## for checking that admissions number look reasonable when running with actual bed numbers, or enough beds for everybody
 admissions_no_change <-
-  incidences[scenario %in% c(5,6) & state == "Admissions",
+  incidences[scenario %in% c("given beds", "as observed") & state == "Admissions",
              list(mean = mean(value),
                   median = median(value),
                   min.1 = quantile(value, 0.25),
@@ -205,8 +206,8 @@ quantile(dfs[, `R0 always > 1` / `as observed`],
 quantile(dfs[, `No improvement in\nhealthcare seeking` / `as observed`],
          c(0.025, 0.25, 0.5, 0.75, 0.975))
 
-first_scenarios <- c("10 beds", "40 beds", "as observed")
-second_scenarios <- c("R0 always > 1", "No improvement in\nhealthcare seeking", "as observed")
+first_scenarios <- c("as observed", "10 beds", "40 beds")
+second_scenarios <- c("as observed", "No improvement in\nhealthcare seeking")
 
 scenarios_1 <- cases[scenario %in% first_scenarios]
 scenarios_1[, scenario := factor(scenario, first_scenarios)]
@@ -220,6 +221,7 @@ p1 <- ggplot(scenarios_1,
   scale_color_brewer("", palette = "Set1") +
   scale_fill_brewer("", palette = "Set1") +
   scale_y_continuous("Incidence") +
+  coord_cartesian(ylim = c(0, 800)) +
   scale_x_date("") +
   theme(legend.position = "top")
 
@@ -232,7 +234,7 @@ p2 <- ggplot(scenarios_2,
   scale_y_continuous("Incidence") +
   scale_x_date("") +
   theme(legend.position = "top") + 
-  coord_cartesian(ylim = c(0, 2000)) +
+  coord_cartesian(ylim = c(0, 800)) +
   guides(fill=guide_legend(nrow=2,byrow=TRUE))
 
 pg <- plot_grid(p1, p2, labels = c("a", "b"), align = "h")
