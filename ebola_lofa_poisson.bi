@@ -74,7 +74,7 @@ model ebola_lofa_poisson {
     p_N <- 270114
     p_rho <- 1 / (e_rho * 4.7) * rate_multiplier
     p_alpha <- 1 * rate_multiplier
-    p_cfr <- 0.6695464
+    p_cfr <- 0.6125682
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
     p_Inf ~ uniform(0, 100)
     p_R0 ~ uniform(0, 10)
