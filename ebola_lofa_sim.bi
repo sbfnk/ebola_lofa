@@ -109,7 +109,7 @@ model ebola_lofa_sim {
     p_gamma <- 1 / (e_gamma * 2.601496) * rate_multiplier
     p_theta <- 1 / (e_theta * 1.279192) * rate_multiplier
     p_delta <- 1 / (e_delta * 2.302684) * rate_multiplier
-    p_Inf ~ uniform(0, 100)
+    p_Inf ~ uniform(0, 200)
     p_rep_d ~ uniform(0, 1)
   }
 
