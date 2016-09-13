@@ -3,7 +3,8 @@ title: 'Electronic supplementary material: Modelling results'
 author: 'The impact of control strategies and behavioural changes on the elimination of Ebola from Lofa County, Liberia'
 date: 'Sebastian Funk, Iza Ciglenecki, Amanda Tiffany, Etienne Gignoux, Anton Camacho, Rosalind M. Eggo, Adam J. Kucharski, W. John Edmunds, Josephus Bolongei, Phillip Azuma, Peter Clement, Alpha Tamba, Esther Sterk, Barbara Telfer, Gregory Engel, Lucy Anne Parker, Motoi Suzuki, Nico Heijenberg, Bruce Reeder'
 output:
-  pdf_document
+  html_document:
+    self_contained: true
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE}
@@ -109,12 +110,12 @@ combined <- lapply(names(res[[1]]), function(x) {
   setkey(z, np)
   z
 })
+names(combined) <- names(res[[1]])
 ```
 
 Save
 
 ```{r save}
-names(combined) <- names(res[[1]])
 saveRDS(list(traces = combined, input = input, obs = obs, data = data), paste0(output_dir, "/lofa_combined_traces.rds"))
 ``` 
 
@@ -139,9 +140,16 @@ p <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02"
 p$states
 ```
 
+### Figure 3:
+
+```{r fig_3}
+p_obs <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE, states = "Admissions")
+p_obs$states
+```
+
 ## Traces
 ```{r traces}
-p$trace
+p$traces
 ```
 
 ## Densities
