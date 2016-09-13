@@ -61,7 +61,7 @@ output_dir <- "~/Data/Ebola/Lofa/"
 
 Load required packages
 ```{r load}
-for (package in github_packages)
+for (package in c(cran_packages, github_packages))
 {
     library(sub("^.*/", "", package), character.only = TRUE)
 }
@@ -70,7 +70,7 @@ for (package in github_packages)
 Get MCMC chains
 
 ```{r get_chains}
-mcmc_files <- list.files(output_dir, pattern = "ebola_lofa_independent_[0-9]+\\.rds", full.names = TRUE)
+mcmc_files <- list.files(output_dir, pattern = "ebola_lofa_[0-9]+\\.rds", full.names = TRUE)
 
 res <- list()
 
