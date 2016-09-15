@@ -1,6 +1,6 @@
 ---
 title: 'Electronic supplementary material: Modelling results'
-author: 'The impact of control strategies and behavioural changes on the elimination of Ebola from Lofa County, Liberia'
+author: 'Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia'
 date: 'Sebastian Funk, Iza Ciglenecki, Amanda Tiffany, Etienne Gignoux, Anton Camacho, Rosalind M. Eggo, Adam J. Kucharski, W. John Edmunds, Josephus Bolongei, Phillip Azuma, Peter Clement, Alpha Tamba, Esther Sterk, Barbara Telfer, Gregory Engel, Lucy Anne Parker, Motoi Suzuki, Nico Heijenberg, Bruce Reeder'
 output:
   html_document:
@@ -132,7 +132,14 @@ combined$Admissions[is.na(value), value := 0]
 # Plot
 
 ```{r plot}
-p <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE)
+labels <- c(p_Inf = "Initially infected",
+            p_R0 = "Initial italic(R[0])",
+            p_early_H = "italic(h)[early]",
+            p_late_H = "italic(h)[late]",
+            p_H_alpha = "italic(epsilon)",
+            p_H_tau = "italic(tau)",
+            p_vol_R0 = "italic(sigma[R[0]])")
+p <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE, labels = labels)
 ```
 
 ## State estimates
