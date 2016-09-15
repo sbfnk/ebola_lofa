@@ -1,10 +1,11 @@
 ---
 title: 'Electronic supplementary material: Modelling results'
-author: 'Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia'
+author: 'The impact of control strategies and behavioural changes on the elimination of Ebola from Lofa County, Liberia'
 date: 'Sebastian Funk, Iza Ciglenecki, Amanda Tiffany, Etienne Gignoux, Anton Camacho, Rosalind M. Eggo, Adam J. Kucharski, W. John Edmunds, Josephus Bolongei, Phillip Azuma, Peter Clement, Alpha Tamba, Esther Sterk, Barbara Telfer, Gregory Engel, Lucy Anne Parker, Motoi Suzuki, Nico Heijenberg, Bruce Reeder'
 output:
-  html_document:
-    self_contained: true
+  pdf_document:
+    toc: true
+    toc_depth: 2
 ---
 
 ```{r setup, echo = FALSE, cache = FALSE}
@@ -13,7 +14,7 @@ knitr::opts_chunk$set(cache = TRUE, fig.cap = '', fig.align = "center", message 
 
 # Introduction
 
-This document contains the R code necessary to reproduce the results in "Epidemiology, events and control strategies towards eliminating of Ebola from Lofa County, Liberia." All code and data used here are in a [github repository](http://github.com/sbfnk/ebola_lofa).
+This document contains the R code necessary to reproduce the results in "The impact of control strategies and behavioural changes on the elimination of Ebola from Lofa County, Liberia," as well as details of $R_0$ calculations omitted from the main manuscript. All code and data used here are in a [github repository](http://github.com/sbfnk/ebola_lofa).
 
 ## Required packages
 ```{r packages}
@@ -132,8 +133,8 @@ combined$Admissions[is.na(value), value := 0]
 # Plot
 
 ```{r plot}
-labels <- c(p_Inf = "Initially infected",
-            p_R0 = "Initial italic(R[0])",
+labels <- c(p_Inf = "Initially*infected",
+            p_R0 = "Initial*italic(R[0])",
             p_early_H = "italic(h)[early]",
             p_late_H = "italic(h)[late]",
             p_H_alpha = "italic(epsilon)",
@@ -224,3 +225,42 @@ elH[, list(median = median(ratio),
            min.95 = quantile(ratio, 0.025),
            max.95 = quantile(ratio, 0.975))]
 ```
+
+# $R_0$ calculations
+
+Here, we present exact calculations of the approximations presented in the main text, considering a model with 3 infectious compartments ($I_{1\ldots 3}$) which are traversed by everybody who gets infected, unless they get admitted to the ETC (at rate $\kappa$). In the last infectious compartment ($I_3$), patients have their infectiousness modified by a factor $\eta$. If they leave this compartment before they get admitted to the ETC and die (with probability $c$), they proceed to unsafe burial (ending at rate $\alpha$), during which they also have their infectiousness modified by $\eta$. If, for example, individuals are twice as infectiousness late in their illness and during an unsafe burial, $\eta = 2$, and if infectiousness does not change during the course of the illness, $\eta = 1$.
+
+Following Diekmann et al. (2010), the transmission matrix of this model is
+
+\begin{equation*}
+\boldsymbol{T} = 
+  \begin{pmatrix}
+    \beta & \beta & \eta \beta & \eta \beta\\
+    0 & 0 & 0 & 0\\
+    0 & 0 & 0 & 0\\
+    0 & 0 & 0 & 0\\
+  \end{pmatrix}
+\end{equation*}
+
+The transition matrix is 
+
+\begin{equation*}
+\boldsymbol{\Sigma} = 
+\begin{pmatrix}
+- 3 \gamma - \kappa & 0 & 0 & 0 \\
+3 \gamma  & - 3 \gamma - \kappa & 0 & 0 \\
+0 & 3 \gamma  & - 3 \gamma - \kappa &  0 \\
+0 & 0 & 3 c \gamma  & - \alpha \\
+\end{pmatrix}
+\end{equation*}
+
+The reproduction number is the largest eigenvalue of $\boldsymbol{K_\mathrm{L}} = -\boldsymbol{T}\boldsymbol{\Sigma}$, or
+
+\begin{equation*}
+R_0 = {{\beta\,\left(\alpha\,\kappa^2+9\,\alpha\,\kappa\,\gamma+18\,
+ \alpha\,\gamma^2+9\,\alpha\,\eta\,\gamma^2+27\,c\,\eta\,\gamma^3
+ \right)}\over{\alpha\,\left(\kappa+3\,\gamma\right)^3}}
+\end{equation*}
+
+The community reproduction number (i.e., the reproduction number in the absence of isolation) is obtained by setting $\kappa = 0$ (Eq. 5 in the main manuscript), the reproduction number of isolated cases is obtained by setting $\alpha = 0$ and $\kappa$ to the reciprocal of the delay from onset to admission.
+
