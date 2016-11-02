@@ -18,8 +18,8 @@ This document contains the R code necessary to reproduce the results in "The imp
 
 ## Required packages
 ```{r packages}
-cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm")
-github_packages <- c("libbi/RBi", "sbfnk/RBi.helpers")
+cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm", "rbi")
+github_packages <- c("sbfnk/RBi.helpers")
 ```
 
 ```{r install, eval = FALSE}
@@ -65,7 +65,7 @@ Load required packages
 ```{r load}
 for (package in c(cran_packages, github_packages))
 {
-    library(sub("^.*/", "", package), character.only = TRUE)
+    library(tolower(sub("^.*/", "", package)), character.only = TRUE)
 }
 ```
 
@@ -150,9 +150,9 @@ p$states
 
 ### Figure 3:
 
-```{r fig_3}
+```{r fig_3,fig.width= 5,fig.height=4}
 p_obs <- plot_libbi(combined, model, data = data, date.origin = as.Date("2014-06-02") - 7, date.unit = "week", data.colour = "black", densities = "histogram", plot = FALSE, states = "Admissions")
-p_obs$states
+p_obs$states + ylab("Weekly new admissions")
 ```
 
 ## Traces
