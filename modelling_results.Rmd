@@ -18,8 +18,8 @@ This document contains the R code necessary to reproduce the results in "The imp
 
 ## Required packages
 ```{r packages}
-cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm")
-github_packages <- c("libbi/RBi", "sbfnk/RBi.helpers")
+cran_packages <- c("devtools","dplyr", "tidyr", "cowplot", "stringi", "truncnorm", "rbi")
+github_packages <- c("sbfnk/RBi.helpers")
 ```
 
 ```{r install, eval = FALSE}
