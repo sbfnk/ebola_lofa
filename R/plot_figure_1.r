@@ -132,3 +132,7 @@ write.table(community_deaths, quote = FALSE, sep = ",", row.names = FALSE, file 
 write.table(admission_delay, quote = FALSE, sep = ",", row.names = FALSE, file = "admission_delay.csv")
 write.table(reached, quote = FALSE, sep = ",", row.names = FALSE, file = "reached.csv")
 
+## plot just hospital admission
+p <- ggplot(weekly_admissions, aes(x=date, y=admissions))+geom_bar(stat="identity", fill="black")+ylab("New hospital admissions")+scale_x_date(date_labels="%b %Y")+xlab("")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+save_plot("lofa_admission_data.pdf", p)
+save_plot("lofa_admission_data.png", p)
